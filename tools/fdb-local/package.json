@@ -1,0 +1,12 @@
+{
+  "name": "fdb-local",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Extrae tablas de un .FDB de Aspel NOI/COI a CSV, corriendo localmente sin Docker",
+  "scripts": {
+    "start": "node extract.js"
+  },
+  "dependencies": {
+    "node-firebird": "^1.1.9"
+  }
+}

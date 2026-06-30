@@ -1,0 +1,41 @@
+# Fly.io config para el microservicio FDB.
+# 1) Instala flyctl:  https://fly.io/docs/hands-on/install-flyctl/
+# 2) flyctl auth signup   (cuenta gratis)
+# 3) cd tools/fdb-extractor
+# 4) flyctl launch --no-deploy --copy-config --dockerfile Dockerfile --name fdb-extractor-<TU-ALIAS>
+#    (acepta sí a postgres/redis = NO; copia este toml tal cual)
+# 5) flyctl secrets set EXTRACTOR_TOKEN="$(openssl rand -hex 32)"
+# 6) flyctl deploy
+# 7) Copia la URL pública (https://fdb-extractor-<TU-ALIAS>.fly.dev) y el token,
+#    luego pégalos en los secrets FDB_EXTRACTOR_URL y FDB_EXTRACTOR_TOKEN de la app.
+
+app = "fdb-extractor"
+primary_region = "iad"   # cambia a "qro" / "mia" / "scl" si te conviene más
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8787"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0   # 0 = se duerme cuando nadie lo usa (gratis)
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 5
+    hard_limit = 10
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024   # FB 2.5 + Node necesitan ~1 GB
+
+[mounts]
+  source = "fdb_tmp"
+  destination = "/tmp"

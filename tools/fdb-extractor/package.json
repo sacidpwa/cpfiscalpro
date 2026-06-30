@@ -1,0 +1,17 @@
+{
+  "name": "fdb-extractor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Extrae tablas de .FDB (Aspel NOI/COI Firebird) y las devuelve como CSV",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "node-firebird": "^1.1.9",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "archiver": "^7.0.1",
+    "cors": "^2.8.5"
+  }
+}

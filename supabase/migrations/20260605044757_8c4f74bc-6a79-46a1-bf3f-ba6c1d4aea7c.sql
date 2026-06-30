@@ -1,0 +1,1 @@
+ALTER TABLE public.attendance_entries ADD COLUMN IF NOT EXISTS extra_codes text[] NOT NULL DEFAULT '{}';

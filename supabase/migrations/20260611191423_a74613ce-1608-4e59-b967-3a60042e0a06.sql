@@ -1,0 +1,2 @@
+ALTER TABLE public.cfdi_stamps DROP CONSTRAINT IF EXISTS cfdi_stamps_kind_check;
+ALTER TABLE public.cfdi_stamps ADD CONSTRAINT cfdi_stamps_kind_check CHECK (kind = ANY (ARRAY['nomina'::text, 'factura'::text, 'ingreso'::text]));

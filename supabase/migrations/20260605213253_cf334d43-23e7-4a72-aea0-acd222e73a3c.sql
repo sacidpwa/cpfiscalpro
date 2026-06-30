@@ -1,0 +1,1 @@
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS infonavit_cuota_mensual numeric NOT NULL DEFAULT 0;
