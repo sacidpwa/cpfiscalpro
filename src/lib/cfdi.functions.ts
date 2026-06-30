@@ -510,7 +510,7 @@ export const getCfdiDownloadUrl = createServerFn({ method: "POST" })
     const admin = supabaseAdmin as any;
     const { data: stamp, error } = await admin
       .from("cfdi_stamps")
-      .select("organization_id, xml_path, pdf_path")
+      .select("organization_id, xml_path, pdf_path, facturapi_id, kind")
       .eq("id", data.stampId)
       .single();
     if (error || !stamp) throw new Error("Timbrado no encontrado");
@@ -518,15 +518,28 @@ export const getCfdiDownloadUrl = createServerFn({ method: "POST" })
       _org: stamp.organization_id, _user: context.userId,
     });
     if (!ok) throw new Error("Sin acceso");
+
+    // Intentar descargar desde Storage
     const path = data.kind === "xml" ? stamp.xml_path : stamp.pdf_path;
-    if (!path) throw new Error(`Archivo ${data.kind.toUpperCase()} no disponible`);
-    const bucket = data.kind === "xml" ? "cfdi-xml" : "cfdi-pdf";
-    const { data: signed, error: se } = await admin.storage.from(bucket).createSignedUrl(path, 300);
-    if (se || !signed?.signedUrl) throw new Error(se?.message ?? "Error al generar enlace de descarga");
-    const resp = await fetch(signed.signedUrl);
-    if (!resp.ok) throw new Error("Error al descargar el archivo del almacenamiento");
-    const buffer = await resp.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
+    if (path) {
+      const bucket = data.kind === "xml" ? "cfdi-xml" : "cfdi-pdf";
+      const { data: signed, error: se } = await admin.storage.from(bucket).createSignedUrl(path, 300);
+      if (!se && signed?.signedUrl) {
+        const resp = await fetch(signed.signedUrl);
+        if (resp.ok) {
+          const buffer = await resp.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString("base64");
+          const mime = data.kind === "xml" ? "application/xml" : "application/pdf";
+          return { base64, mime, filename: `${data.stampId.slice(0, 8)}.${data.kind}` };
+        }
+      }
+    }
+
+    // Fallback: descargar desde FacturAPI (para stamps existentes sin archivo en storage)
+    if (!stamp.facturapi_id) throw new Error("Archivo no disponible en almacenamiento ni en FacturAPI");
+    const apiKeyInfo = await getApiKey(stamp.organization_id);
+    const buf = await downloadFile(apiKeyInfo.key, `/invoices/${stamp.facturapi_id}/${data.kind}`);
+    const base64 = Buffer.from(buf).toString("base64");
     const mime = data.kind === "xml" ? "application/xml" : "application/pdf";
     return { base64, mime, filename: `${data.stampId.slice(0, 8)}.${data.kind}` };
   });

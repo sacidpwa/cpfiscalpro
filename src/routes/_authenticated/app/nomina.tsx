@@ -313,7 +313,6 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
   }
   async function descargar(stampId: string, kind: "xml" | "pdf") {
     try {
-      console.log("descargar called", stampId, kind);
       const { base64, mime, filename } = await dlUrl({ data: { stampId, kind } });
       const bin = atob(base64);
       const bytes = new Uint8Array(bin.length);
@@ -330,7 +329,7 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
         document.body.removeChild(a);
         URL.revokeObjectURL(objUrl);
       }, 1000);
-    } catch (e: any) { console.error("descargar error", e); toast.error(e.message ?? "Error"); }
+    } catch (e: any) { toast.error(e.message ?? "Error"); }
   }
 
   async function enviarUno(receiptId: string, empName: string, empEmail?: string) {
