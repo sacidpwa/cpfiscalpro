@@ -144,6 +144,7 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
   }
 
   header();
+  colRow();
 
   function itemRow(c: Item, pl = 16) {
     autoTable(doc, {
@@ -164,13 +165,11 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   // --- INGRESOS ---
   sectionHead("INGRESOS", [37, 99, 235]);
-  colRow();
   for (const c of er.ingresos) itemRow(c);
   totalRow("Total Ingresos", er.totalIngresosPer, er.totalIngresosYTD, { color: [22, 163, 74], topBorder: true });
 
   // --- COSTOS ---
   sectionHead("COSTOS", [190, 80, 60]);
-  colRow();
   for (const c of er.costos) itemRow(c);
   totalRow("Total Costos", -er.totalCostosPer, -er.totalCostosYTD, { color: [190, 80, 60], topBorder: true });
 
@@ -180,7 +179,6 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   // --- GASTOS DE OPERACIÓN ---
   sectionHead("GASTOS DE OPERACIÓN", [217, 119, 6]);
-  colRow();
   for (const [key, def] of Object.entries(er.gastosOpDef)) {
     const items = er.gastosOp[key] || [];
     const hasMov = items.some((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01);
@@ -204,7 +202,6 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   // --- OTROS INGRESOS Y GASTOS ---
   sectionHead("OTROS INGRESOS Y GASTOS", [5, 150, 105]);
-  colRow();
   for (const [key, def] of Object.entries(er.otrosDef)) {
     const items = er.otrosGrupos[key] || [];
     const hasMov = items.some((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01);
