@@ -206,7 +206,7 @@ function EmpForm({ initial, onClose, onSave }: { initial: any; onClose: () => vo
     fecha_baja: fmtDateInput(initial?.fecha_baja),
     puesto: initial?.puesto ?? "",
     departamento: initial?.departamento ?? "",
-    empresa: initial?.empresa ?? "",
+    empresa: initial?.empresa ?? "HELIX-LAROSS",
     salario_diario: initial?.salario_diario ?? "",
     periodicidad: initial?.periodicidad ?? "quincenal",
     forma_pago: initial?.forma_pago ?? "transferencia",
@@ -240,7 +240,7 @@ function EmpForm({ initial, onClose, onSave }: { initial: any; onClose: () => vo
           <Input label="Nombre(s)" value={f.nombre} onChange={(v) => setF({ ...f, nombre: v })} required className="col-span-2"/>
           <Input label="Apellido paterno" value={f.apellido_paterno} onChange={(v) => setF({ ...f, apellido_paterno: v })} />
           <Input label="Apellido materno" value={f.apellido_materno} onChange={(v) => setF({ ...f, apellido_materno: v })} />
-          <Input label="Empresa" value={f.empresa} onChange={(v) => setF({ ...f, empresa: v })} />
+          <Select label="Empresa" value={f.empresa} options={[["HELIX-LAROSS","HELIX-LAROSS"],["HELIX","HELIX"]]} onChange={(v) => setF({ ...f, empresa: v })} required />
           <Input label="RFC" value={f.rfc} mono onChange={(v) => setF({ ...f, rfc: v.toUpperCase() })} />
           <Input label="CURP" value={f.curp} mono onChange={(v) => setF({ ...f, curp: v.toUpperCase() })} />
           <Input label="NSS" value={f.nss} mono onChange={(v) => setF({ ...f, nss: v })} />
@@ -290,10 +290,10 @@ function Input({ label, value, onChange, required, type = "text", step, mono, cl
     </Field>
   );
 }
-function Select({ label, value, options, onChange }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void }) {
+function Select({ label, value, options, onChange, required }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void; required?: boolean }) {
   return (
     <Field label={label}>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring">
+      <select value={value} onChange={(e) => onChange(e.target.value)} required={required} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring">
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
     </Field>

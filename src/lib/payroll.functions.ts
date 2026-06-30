@@ -33,7 +33,7 @@ const upsertSchema = z.object({
   fecha_baja: z.string().optional().nullable(),
   puesto: z.string().optional(),
   departamento: z.string().optional(),
-  empresa: z.string().optional().nullable(),
+  empresa: z.string().min(1, "Empresa es requerida"),
   salario_diario: z.number().min(0),
   periodicidad: z.enum(["semanal", "catorcenal", "quincenal", "mensual"]),
   forma_pago: z.string().optional(),
