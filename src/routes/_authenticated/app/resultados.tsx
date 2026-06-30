@@ -2,11 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, Fragment } from "react";
+import { toast } from "sonner";
 import { getEstadoResultados } from "@/lib/accounting.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
-import { LineChart, ChevronDown, ChevronRight } from "lucide-react";
-import { fmtMoney } from "@/lib/format";
+import { LineChart, ChevronDown, ChevronRight, FileDown } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/resultados")({
   component: Resultados,
@@ -37,9 +37,21 @@ function Resultados() {
     setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
   }
 
+  async function downloadPdf() {
+    if (!er) return;
+    const { generateResultadosPDF } = await import("@/lib/resultados-pdf");
+    const t = toast.loading("Generando PDF…");
+    try {
+      generateResultadosPDF(org, er, desde, hasta, ejercicio);
+      toast.success("PDF generado", { id: t });
+    } catch (e: any) { toast.error(e.message ?? "Error", { id: t }); }
+  }
+
   return (
     <div>
-      <PageHeader title="Estado de Resultados" description="Rentabilidad y estructura de ingresos y gastos" />
+      <PageHeader title="Estado de Resultados" description="Rentabilidad y estructura de ingresos y gastos"
+        actions={er ? <button onClick={downloadPdf} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs font-medium hover:bg-secondary"><FileDown className="h-3.5 w-3.5" /> Descargar PDF</button> : undefined}
+      />
       <div className="space-y-4 p-8">
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
           <label className="block text-xs"><span className="mb-1 block text-muted-foreground">Desde</span>
