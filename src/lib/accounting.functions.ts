@@ -370,6 +370,48 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
     };
   });
 
+// ============ SPLIT NÓMINA POR EMPRESA (HELIX / HELIX-LAROSS) ============
+export const getHelixLarossSplit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ organizationId: z.string().uuid(), ejercicio: z.number(), desdeMes: z.number(), hastaMes: z.number() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const desde = `${data.ejercicio}-${String(data.desdeMes).padStart(2, "0")}-01`;
+    const hasta = new Date(data.ejercicio, data.hastaMes, 0).toISOString().slice(0, 10);
+
+    const { data: periods } = await (supabaseAdmin as any)
+      .from("payroll_periods")
+      .select("id")
+      .eq("organization_id", data.organizationId)
+      .eq("ejercicio", data.ejercicio)
+      .gte("fecha_pago", desde)
+      .lte("fecha_pago", hasta);
+    const periodIds = (periods ?? []).map((p: any) => p.id);
+    if (!periodIds.length) return { helix: { nomina: 0, isr: 0, imss: 0, neto: 0 }, laross: { nomina: 0, isr: 0, imss: 0, neto: 0 } };
+
+    const { data: rows } = await (supabaseAdmin as any)
+      .from("payroll_receipts")
+      .select("total_percepciones, isr, imss_obrero, neto_pagar, employee:employees(empresa)")
+      .in("payroll_period_id", periodIds);
+
+    const split: Record<string, { nomina: number; isr: number; imss: number; neto: number }> = {};
+    for (const r of rows ?? []) {
+      const emp = (r.employee?.empresa || "HELIX-LAROSS").trim() || "HELIX-LAROSS";
+      if (!split[emp]) split[emp] = { nomina: 0, isr: 0, imss: 0, neto: 0 };
+      split[emp].nomina += Number(r.total_percepciones ?? 0);
+      split[emp].isr += Number(r.isr ?? 0);
+      split[emp].imss += Number(r.imss_obrero ?? 0);
+      split[emp].neto += Number(r.neto_pagar ?? 0);
+    }
+
+    return {
+      helix: split["HELIX"] ?? { nomina: 0, isr: 0, imss: 0, neto: 0 },
+      laross: split["HELIX-LAROSS"] ?? { nomina: 0, isr: 0, imss: 0, neto: 0 },
+    };
+  });
+
 // ============ BALANCE GENERAL ============
 export const getBalanceGeneral = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

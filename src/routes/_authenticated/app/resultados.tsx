@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, Fragment } from "react";
 import { toast } from "sonner";
-import { getEstadoResultados } from "@/lib/accounting.functions";
+import { getEstadoResultados, getHelixLarossSplit } from "@/lib/accounting.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { LineChart, ChevronDown, ChevronRight, FileDown } from "lucide-react";
@@ -16,6 +16,17 @@ const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto'
 
 function fmt(n: number) { return Number(n).toLocaleString('es-MX', {minimumFractionDigits:2,maximumFractionDigits:2}); }
 function pctFmt(n: number) { return n.toFixed(2) + '%'; }
+function HLRow({ label, h, l }: { label: string; h: number; l: number }) {
+  return (
+    <tr>
+      <td className="px-3 pl-8 font-mono text-xs">{label}</td>
+      <td className="px-3 text-right font-mono font-medium">${fmt(h)}</td>
+      <td></td>
+      <td className="px-3 text-right font-mono font-medium">${fmt(l)}</td>
+      <td></td>
+    </tr>
+  );
+}
 
 function Resultados() {
   const org = useRequireOrg();
@@ -27,7 +38,14 @@ function Resultados() {
   const [desde, setDesde] = useState(1);
   const [hasta, setHasta] = useState(mesAct);
   const [detalle, setDetalle] = useState(true);
+  const [splitOn, setSplitOn] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const splitFn = useServerFn(getHelixLarossSplit);
+  const { data: splitData } = useQuery({
+    queryKey: ["hl-split", org.id, ejercicio, desde, hasta],
+    queryFn: () => splitFn({ data: { organizationId: org.id, ejercicio, desdeMes: desde, hastaMes: hasta } }),
+    enabled: splitOn,
+  });
 
   const { data: er, isLoading } = useQuery({
     queryKey: ["er", org.id, ejercicio, desde, hasta],
@@ -43,7 +61,7 @@ function Resultados() {
     const { generateResultadosPDF } = await import("@/lib/resultados-pdf");
     const t = toast.loading("Generando PDF…");
     try {
-      generateResultadosPDF(org, er, desde, hasta, ejercicio, detalle);
+      generateResultadosPDF(org, er, desde, hasta, ejercicio, detalle, splitOn && splitData ? splitData : null);
       toast.success("PDF generado", { id: t });
     } catch (e: any) { toast.error(e.message ?? "Error", { id: t }); }
   }
@@ -55,6 +73,10 @@ function Resultados() {
           <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
             <input type="checkbox" checked={detalle} onChange={e => setDetalle(e.target.checked)} className="h-3.5 w-3.5" />
             Detalle
+          </label>
+          <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+            <input type="checkbox" checked={splitOn} onChange={e => setSplitOn(e.target.checked)} className="h-3.5 w-3.5" />
+            HELIX-LAROSS
           </label>
           <button onClick={downloadPdf} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs font-medium hover:bg-secondary"><FileDown className="h-3.5 w-3.5" /> Descargar PDF</button>
         </div> : undefined}
@@ -187,6 +209,23 @@ function Resultados() {
                   <td className="px-3 text-right font-mono" style={{color:'#d97706'}}>${fmt(er.totalGastosYTD)}</td>
                   <td className="px-3 text-right font-mono">{pctFmt(er.totalGastosYTD/er.ventasYTD*100)}</td>
                 </tr>
+
+                {/* HELIX-LAROSS SPLIT (informativo) */}
+                {splitOn && splitData && (
+                  <>
+                    <tr style={{background:'#f5f3ff'}}><td colSpan={5} className="px-3 py-2 font-bold" style={{color:'#7c3aed',fontSize:'.85rem'}}>HELIX-LAROSS (solo informativo)</td></tr>
+                    <tr className="text-xs uppercase text-muted-foreground" style={{background:'#f5f3ff'}}>
+                      <td className="px-3 pl-6 py-1 font-semibold" style={{color:'#6b21a8'}}>Concepto</td>
+                      <td className="px-3 text-right font-semibold" style={{color:'#6b21a8'}}>HELIX</td>
+                      <td></td>
+                      <td className="px-3 text-right font-semibold" style={{color:'#6b21a8'}}>HELIX-LAROSS</td>
+                      <td></td>
+                    </tr>
+                    <HLRow label="Nómina" h={splitData.helix.nomina} l={splitData.laross.nomina} />
+                    <HLRow label="ISR" h={splitData.helix.isr} l={splitData.laross.isr} />
+                    <HLRow label="IMSS" h={splitData.helix.imss} l={splitData.laross.imss} />
+                  </>
+                )}
 
                 {/* UTILIDAD OPERACIÓN */}
                 <tr style={{borderTop:'2px solid hsl(var(--color-foreground))',background:'#f8fafc'}}>

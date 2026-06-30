@@ -23,10 +23,12 @@ type ErData = {
   utilidadNetaPer: number; utilidadNetaYTD: number;
 };
 
+type SplitData = { helix: { nomina: number; isr: number; imss: number; neto: number }; laross: { nomina: number; isr: number; imss: number; neto: number } };
+
 function fm(n: number) { return MXN.format(n); }
 function pct(v: number, base: number) { return base !== 0 ? (v / base) * 100 : 0; }
 
-export function generateResultadosPDF(org: { razon_social: string; rfc: string; regimen?: string }, er: ErData, desde: number, hasta: number, ejercicio: number, detalle = true) {
+export function generateResultadosPDF(org: { razon_social: string; rfc: string; regimen?: string }, er: ErData, desde: number, hasta: number, ejercicio: number, detalle = true, split?: SplitData | null) {
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 40;
@@ -195,6 +197,31 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
   }
   spacer(4);
   totalRow("Total Gastos de Operación", er.totalGastosPer, er.totalGastosYTD, { color: [217, 119, 6], topBorder: true });
+
+  // --- HELIX-LAROSS SPLIT (informativo) ---
+  if (split) {
+    sectionHead("HELIX-LAROSS (solo informativo)", [124, 58, 237]);
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable?.finalY ?? 118,
+      head: [[
+        { content: "Concepto", styles: { halign: "left", fontStyle: "bold", fontSize: 7.5, fillColor: [245, 243, 255], textColor: [107, 33, 168] } },
+        { content: "HELIX", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5, fillColor: [245, 243, 255], textColor: [107, 33, 168] } },
+        { content: "", styles: { fillColor: [245, 243, 255] } },
+        { content: "HELIX-LAROSS", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5, fillColor: [245, 243, 255], textColor: [107, 33, 168] } },
+        { content: "", styles: { fillColor: [245, 243, 255] } },
+      ]],
+      body: [
+        ["Nómina", fm(split.helix.nomina), "", fm(split.laross.nomina), ""],
+        ["ISR", fm(split.helix.isr), "", fm(split.laross.isr), ""],
+        ["IMSS", fm(split.helix.imss), "", fm(split.laross.imss), ""],
+      ].map(row => row.map(c => ({ content: c, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 16] } }))),
+      margin: { left: margin, right: margin },
+      tableLineWidth: 0,
+      styles: { fontSize: 7.5, cellPadding: 3, lineColor: 230, lineWidth: 0.3 },
+      headStyles: { lineWidth: 0 },
+      columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2, halign: "right" }, 2: { cellWidth: col3 }, 3: { cellWidth: col4, halign: "right" }, 4: { cellWidth: col5 } },
+    });
+  }
 
   // --- UTILIDAD DE OPERACIÓN ---
   spacer();
