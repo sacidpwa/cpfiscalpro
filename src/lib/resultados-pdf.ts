@@ -26,7 +26,7 @@ type ErData = {
 function fm(n: number) { return MXN.format(n); }
 function pct(v: number, base: number) { return base !== 0 ? (v / base) * 100 : 0; }
 
-export function generateResultadosPDF(org: { razon_social: string; rfc: string; regimen?: string }, er: ErData, desde: number, hasta: number, ejercicio: number) {
+export function generateResultadosPDF(org: { razon_social: string; rfc: string; regimen?: string }, er: ErData, desde: number, hasta: number, ejercicio: number, detalle = true) {
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 40;
@@ -61,22 +61,22 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
     });
   }
 
-  function subSection(label: string, items: Item[], def: any, isOp: boolean) {
-    const isCollapsed = items.every((c: any) => Math.abs(c.perVal) < 0.01 && Math.abs(c.ytdVal) < 0.01);
-    if (isCollapsed) return;
+  function subSection(label: string, items: Item[], isOp: boolean) {
+    const hasMov = items.some((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01);
+    if (!hasMov) return;
 
     autoTable(doc, {
       startY: (doc as any).lastAutoTable?.finalY ?? 118,
       head: [[
         { content: label, colSpan: 5, styles: { halign: "left", fontStyle: "bold", fontSize: 8, textColor: isOp ? [146, 64, 14] : [6, 95, 70], cellPadding: [4, 4, 2, 12] } },
       ]],
-      body: items.filter((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01).map(c => [
+      body: detalle ? items.filter((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01).map(c => [
         { content: `${c.codigo.replace(/^0+/, '')} — ${c.nombre}`, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 20] } },
         { content: fm(c.perVal), styles: { halign: "right", fontSize: 7.5 } },
         { content: `${c.perPct.toFixed(2)}%`, styles: { halign: "right", fontSize: 7.5, textColor: 100 } },
         { content: fm(c.ytdVal), styles: { halign: "right", fontSize: 7.5 } },
         { content: `${c.ytdPct.toFixed(2)}%`, styles: { halign: "right", fontSize: 7.5, textColor: 100 } },
-      ]),
+      ]) : [],
       margin: { left: margin, right: margin },
       tableLineWidth: 0,
       styles: { fontSize: 8, cellPadding: 3, lineColor: 230, lineWidth: 0.3 },
@@ -119,13 +119,11 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   header();
 
-  // --- INGRESOS ---
-  sectionHead("INGRESOS", [37, 99, 235]);
-  for (const c of er.ingresos) {
+  function itemRow(c: Item, pl = 16) {
     autoTable(doc, {
       startY: (doc as any).lastAutoTable?.finalY ?? 118,
       body: [[
-        { content: `${c.codigo.replace(/^0+/, '')} — ${c.nombre}`, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 16] } },
+        { content: `${c.codigo.replace(/^0+/, '')} — ${c.nombre}`, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, pl] } },
         { content: fm(c.perVal), styles: { halign: "right", fontSize: 7.5 } },
         { content: `${c.perPct.toFixed(2)}%`, styles: { halign: "right", fontSize: 7.5, textColor: 100 } },
         { content: fm(c.ytdVal), styles: { halign: "right", fontSize: 7.5 } },
@@ -137,26 +135,15 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
       columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2, halign: "right" }, 2: { cellWidth: col3, halign: "right" }, 3: { cellWidth: col4, halign: "right" }, 4: { cellWidth: col5, halign: "right" } },
     });
   }
+
+  // --- INGRESOS ---
+  sectionHead("INGRESOS", [37, 99, 235]);
+  if (detalle) { for (const c of er.ingresos) itemRow(c); }
   totalRow("Total Ingresos", er.totalIngresosPer, er.totalIngresosYTD, { color: [22, 163, 74], topBorder: true });
 
   // --- COSTOS ---
   sectionHead("COSTOS", [220, 38, 38]);
-  for (const c of er.costos) {
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable?.finalY ?? 118,
-      body: [[
-        { content: `${c.codigo.replace(/^0+/, '')} — ${c.nombre}`, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 16] } },
-        { content: fm(c.perVal), styles: { halign: "right", fontSize: 7.5 } },
-        { content: `${c.perPct.toFixed(2)}%`, styles: { halign: "right", fontSize: 7.5, textColor: 100 } },
-        { content: fm(c.ytdVal), styles: { halign: "right", fontSize: 7.5 } },
-        { content: `${c.ytdPct.toFixed(2)}%`, styles: { halign: "right", fontSize: 7.5, textColor: 100 } },
-      ]],
-      margin: { left: margin, right: margin },
-      tableLineWidth: 0,
-      styles: { fontSize: 8, cellPadding: 3, lineColor: 235, lineWidth: 0.3 },
-      columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2, halign: "right" }, 2: { cellWidth: col3, halign: "right" }, 3: { cellWidth: col4, halign: "right" }, 4: { cellWidth: col5, halign: "right" } },
-    });
-  }
+  if (detalle) { for (const c of er.costos) itemRow(c); }
   totalRow("Total Costos", -er.totalCostosPer, -er.totalCostosYTD, { color: [220, 38, 38], topBorder: true });
 
   // --- UTILIDAD BRUTA ---
@@ -170,9 +157,9 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
     const hasMov = items.some((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01);
     if (!hasMov && key === "otros") continue;
     if (key === "venta") {
-      subSection("Gastos de Operación", items, def, true);
+      subSection("Gastos de Operación", items, true);
     } else {
-      subSection(def.label, items, def, true);
+      subSection(def.label, items, true);
     }
     const tot = er.gastosOpTotals[key];
     if (tot && (Math.abs(tot.perVal) > 0.01 || Math.abs(tot.ytdVal) > 0.01)) {
@@ -192,7 +179,7 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
     const items = er.otrosGrupos[key] || [];
     const hasMov = items.some((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01);
     if (!hasMov) continue;
-    subSection(def.label, items, def, false);
+    subSection(def.label, items, false);
     const tot = er.otrosGrupoTotals[key];
     if (tot && (Math.abs(tot.perVal) > 0.01 || Math.abs(tot.ytdVal) > 0.01)) {
       totalRow(`Total ${def.label}`, tot.perVal, tot.ytdVal, { color: [5, 150, 105] });

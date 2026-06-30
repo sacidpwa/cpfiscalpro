@@ -26,6 +26,7 @@ function Resultados() {
   const [ejercicio, setEjercicio] = useState(ej);
   const [desde, setDesde] = useState(1);
   const [hasta, setHasta] = useState(mesAct);
+  const [detalle, setDetalle] = useState(true);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const { data: er, isLoading } = useQuery({
@@ -42,7 +43,7 @@ function Resultados() {
     const { generateResultadosPDF } = await import("@/lib/resultados-pdf");
     const t = toast.loading("Generando PDF…");
     try {
-      generateResultadosPDF(org, er, desde, hasta, ejercicio);
+      generateResultadosPDF(org, er, desde, hasta, ejercicio, detalle);
       toast.success("PDF generado", { id: t });
     } catch (e: any) { toast.error(e.message ?? "Error", { id: t }); }
   }
@@ -50,7 +51,13 @@ function Resultados() {
   return (
     <div>
       <PageHeader title="Estado de Resultados" description="Rentabilidad y estructura de ingresos y gastos"
-        actions={er ? <button onClick={downloadPdf} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs font-medium hover:bg-secondary"><FileDown className="h-3.5 w-3.5" /> Descargar PDF</button> : undefined}
+        actions={er ? <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+            <input type="checkbox" checked={detalle} onChange={e => setDetalle(e.target.checked)} className="h-3.5 w-3.5" />
+            Detalle
+          </label>
+          <button onClick={downloadPdf} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs font-medium hover:bg-secondary"><FileDown className="h-3.5 w-3.5" /> Descargar PDF</button>
+        </div> : undefined}
       />
       <div className="space-y-4 p-8">
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
