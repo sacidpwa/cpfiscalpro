@@ -324,8 +324,13 @@ function StampedComplementsList({ organizationId }: { organizationId: string }) 
       const a = document.createElement("a");
       a.href = objUrl;
       a.download = filename;
+      a.style.display = "none";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(objUrl);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(objUrl);
+      }, 1000);
     } catch (e: any) {
       toast.error(e?.message ?? "No se pudo descargar");
     }
