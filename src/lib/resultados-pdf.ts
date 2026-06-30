@@ -112,7 +112,7 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
   }
 
   function totalRow(label: string, perVal: number, ytdVal: number, opts?: { color?: [number, number, number]; topBorder?: boolean; big?: boolean; percentage?: boolean }) {
-    const c: [number, number, number] = opts?.color ?? (perVal >= 0 ? [20, 20, 30] : [220, 38, 38]);
+    const c: [number, number, number] = opts?.color ?? (perVal >= 0 ? [20, 20, 30] : [190, 80, 60]);
     const pctVal = opts?.percentage !== false ? pct(perVal, er.ventasPer) : 0;
     const ytdPctVal = opts?.percentage !== false ? pct(ytdVal, er.ventasYTD) : 0;
     autoTable(doc, {
@@ -169,14 +169,14 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
   totalRow("Total Ingresos", er.totalIngresosPer, er.totalIngresosYTD, { color: [22, 163, 74], topBorder: true });
 
   // --- COSTOS ---
-  sectionHead("COSTOS", [220, 38, 38]);
+  sectionHead("COSTOS", [190, 80, 60]);
   colRow();
   for (const c of er.costos) itemRow(c);
-  totalRow("Total Costos", -er.totalCostosPer, -er.totalCostosYTD, { color: [220, 38, 38], topBorder: true });
+  totalRow("Total Costos", -er.totalCostosPer, -er.totalCostosYTD, { color: [190, 80, 60], topBorder: true });
 
   // --- UTILIDAD BRUTA ---
   spacer();
-  totalRow("Utilidad Bruta", er.utilidadBrutaPer, er.utilidadBrutaYTD, { big: true, topBorder: true, color: er.utilidadBrutaPer >= 0 ? [20, 20, 30] : [220, 38, 38] });
+  totalRow("Utilidad Bruta", er.utilidadBrutaPer, er.utilidadBrutaYTD, { big: true, topBorder: true, color: er.utilidadBrutaPer >= 0 ? [20, 20, 30] : [190, 80, 60] });
 
   // --- GASTOS DE OPERACIÓN ---
   sectionHead("GASTOS DE OPERACIÓN", [217, 119, 6]);
@@ -200,7 +200,7 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   // --- UTILIDAD DE OPERACIÓN ---
   spacer();
-  totalRow("Utilidad de Operación", er.utilidadOperacionPer, er.utilidadOperacionYTD, { big: true, topBorder: true, color: er.utilidadOperacionPer >= 0 ? [20, 20, 30] : [220, 38, 38] });
+  totalRow("Utilidad de Operación", er.utilidadOperacionPer, er.utilidadOperacionYTD, { big: true, topBorder: true, color: er.utilidadOperacionPer >= 0 ? [20, 20, 30] : [190, 80, 60] });
 
   // --- OTROS INGRESOS Y GASTOS ---
   sectionHead("OTROS INGRESOS Y GASTOS", [5, 150, 105]);
@@ -220,7 +220,7 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   // --- UTILIDAD NETA ---
   spacer();
-  totalRow("Utilidad Neta", er.utilidadNetaPer, er.utilidadNetaYTD, { big: true, topBorder: true, color: er.utilidadNetaPer >= 0 ? [22, 163, 74] : [220, 38, 38] });
+  totalRow("Utilidad Neta", er.utilidadNetaPer, er.utilidadNetaYTD, { big: true, topBorder: true, color: er.utilidadNetaPer >= 0 ? [22, 163, 74] : [190, 80, 60] });
 
   // Footer page numbers
   const pages = doc.getNumberOfPages();
