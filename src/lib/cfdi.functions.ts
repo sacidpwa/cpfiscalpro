@@ -513,7 +513,6 @@ export const getCfdiDownloadUrl = createServerFn({ method: "POST" })
       .eq("id", data.stampId)
       .single();
     if (error || !stamp) throw new Error("Timbrado no encontrado");
-    // Validar membresía
     const { data: ok } = await context.supabase.rpc("is_org_member", {
       _org: stamp.organization_id, _user: context.userId,
     });
@@ -522,8 +521,13 @@ export const getCfdiDownloadUrl = createServerFn({ method: "POST" })
     if (!path) throw new Error(`Archivo ${data.kind.toUpperCase()} no disponible`);
     const bucket = data.kind === "xml" ? "cfdi-xml" : "cfdi-pdf";
     const { data: signed, error: se } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, 300);
-    if (se) throw new Error(se.message);
-    return { url: signed.signedUrl };
+    if (se || !signed?.signedUrl) throw new Error("Error al generar enlace de descarga");
+    const resp = await fetch(signed.signedUrl);
+    if (!resp.ok) throw new Error("Error al descargar el archivo del almacenamiento");
+    const buffer = await resp.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const mime = data.kind === "xml" ? "application/xml" : "application/pdf";
+    return { base64, mime, filename: `${data.stampId.slice(0, 8)}.${data.kind}` };
   });
 
 // =====================================================================

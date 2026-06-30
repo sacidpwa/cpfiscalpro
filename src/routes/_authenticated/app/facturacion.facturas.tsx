@@ -102,8 +102,17 @@ function Facturas() {
 
   async function download(stampId: string, kind: "xml" | "pdf") {
     try {
-      const r = await getUrl({ data: { stampId, kind } });
-      window.open(r.url, "_blank");
+      const { base64, mime, filename } = await getUrl({ data: { stampId, kind } });
+      const bin = atob(base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(objUrl);
     } catch (e: any) { toast.error(e.message); }
   }
   async function doCancel(stampId: string) {

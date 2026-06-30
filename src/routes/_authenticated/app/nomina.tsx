@@ -313,17 +313,16 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
   }
   async function descargar(stampId: string, kind: "xml" | "pdf") {
     try {
-      const { url } = await dlUrl({ data: { stampId, kind } });
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error("Error al descargar el archivo");
-      const blob = await resp.blob();
+      const { base64, mime, filename } = await dlUrl({ data: { stampId, kind } });
+      const bin = atob(base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
       const objUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = objUrl;
-      a.download = `${stampId.slice(0, 8)}.${kind}`;
-      document.body.appendChild(a);
+      a.download = filename;
       a.click();
-      document.body.removeChild(a);
       URL.revokeObjectURL(objUrl);
     } catch (e: any) { toast.error(e.message); }
   }
@@ -395,27 +394,30 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
         if (isStamped) {
           const tasks: Array<Promise<void>> = [];
           if (s.pdf_path) tasks.push((async () => {
-            const { url } = await dlUrl({ data: { stampId: s.id, kind: "pdf" } });
-            const buf = await (await fetch(url)).arrayBuffer();
-            zip.file(`timbrados/${safeName}.pdf`, buf);
+            const { base64, mime } = await dlUrl({ data: { stampId: s.id, kind: "pdf" } });
+            const bin = atob(base64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            zip.file(`timbrados/${safeName}.pdf`, bytes);
           })());
           if (s.xml_path) tasks.push((async () => {
-            const { url } = await dlUrl({ data: { stampId: s.id, kind: "xml" } });
-            const buf = await (await fetch(url)).arrayBuffer();
-            zip.file(`timbrados/${safeName}.xml`, buf);
+            const { base64, mime } = await dlUrl({ data: { stampId: s.id, kind: "xml" } });
+            const bin = atob(base64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            zip.file(`timbrados/${safeName}.xml`, bytes);
           })());
           await Promise.all(tasks);
         } else {
           // Genera un PDF individual (no timbrado) usando el reporte de un solo empleado
-          const res: any = generateNominaPDF({
+          const pdfResult = generateNominaPDF({
             org: { razon_social: org.razon_social, rfc: org.rfc },
             period: period,
             receipts: [r],
             output: "blob",
           });
-          if (res?.blob) {
-            const buf = await res.blob.arrayBuffer();
-            zip.file(`sin_timbrar/${safeName}.pdf`, buf);
+          if (pdfResult instanceof Blob) {
+            zip.file(`sin_timbrar/${safeName}.pdf`, pdfResult);
           }
         }
         n++;
