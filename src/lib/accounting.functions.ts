@@ -378,10 +378,47 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+
+    // Employee count by empresa
+    const { data: empCount } = await admin
+      .from("employees")
+      .select("empresa")
+      .eq("organization_id", data.organizationId)
+      .eq("estatus", "activo");
+    let hCount = 0, lCount = 0;
+    for (const e of empCount ?? []) {
+      const emp = (e.empresa || "HELIX-LAROSS").trim() || "HELIX-LAROSS";
+      if (emp === "HELIX") hCount++; else lCount++;
+    }
+    const totalEmp = hCount + lCount || 1;
+    const hRatio = hCount / totalEmp;
+    const lRatio = lCount / totalEmp;
+
+    // Account balances for honorarios and ISN
+    const honorariosAccts = ["610003000000000000002", "610003100000000000002", "620002900000000000002", "620003000000000000002"];
+    const isnAccts = ["610002000000000000002"];
+    async function getBalSum(accts: string[], mes: number) {
+      const { data: bals } = await admin
+        .from("account_balances")
+        .select("account_codigo, saldo_final")
+        .eq("organization_id", data.organizationId)
+        .eq("ejercicio", data.ejercicio)
+        .eq("periodo", mes)
+        .in("account_codigo", accts);
+      return (bals ?? []).reduce((s: number, b: any) => s + Number(b.saldo_final ?? 0), 0);
+    }
+    const honorariosHasta = await getBalSum(honorariosAccts, data.hastaMes);
+    const honorariosDesde = data.desdeMes > 1 ? await getBalSum(honorariosAccts, data.desdeMes - 1) : 0;
+    const honorariosPer = honorariosHasta - honorariosDesde;
+    const isnHasta = await getBalSum(isnAccts, data.hastaMes);
+    const isnDesde = data.desdeMes > 1 ? await getBalSum(isnAccts, data.desdeMes - 1) : 0;
+    const isnPer = isnHasta - isnDesde;
+
+    // Payroll split by empresa
     const desde = `${data.ejercicio}-${String(data.desdeMes).padStart(2, "0")}-01`;
     const hasta = new Date(data.ejercicio, data.hastaMes, 0).toISOString().slice(0, 10);
-
-    const { data: periods } = await (supabaseAdmin as any)
+    const { data: periods } = await admin
       .from("payroll_periods")
       .select("id")
       .eq("organization_id", data.organizationId)
@@ -389,26 +426,29 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
       .gte("fecha_pago", desde)
       .lte("fecha_pago", hasta);
     const periodIds = (periods ?? []).map((p: any) => p.id);
-    if (!periodIds.length) return { helix: { nomina: 0, isr: 0, imss: 0, neto: 0 }, laross: { nomina: 0, isr: 0, imss: 0, neto: 0 } };
-
-    const { data: rows } = await (supabaseAdmin as any)
-      .from("payroll_receipts")
-      .select("total_percepciones, isr, imss_obrero, neto_pagar, employee:employees(empresa)")
-      .in("payroll_period_id", periodIds);
-
-    const split: Record<string, { nomina: number; isr: number; imss: number; neto: number }> = {};
-    for (const r of rows ?? []) {
-      const emp = (r.employee?.empresa || "HELIX-LAROSS").trim() || "HELIX-LAROSS";
-      if (!split[emp]) split[emp] = { nomina: 0, isr: 0, imss: 0, neto: 0 };
-      split[emp].nomina += Number(r.total_percepciones ?? 0);
-      split[emp].isr += Number(r.isr ?? 0);
-      split[emp].imss += Number(r.imss_obrero ?? 0);
-      split[emp].neto += Number(r.neto_pagar ?? 0);
+    const payrollSplit: Record<string, { nomina: number; isr: number; imss: number }> = {};
+    if (periodIds.length) {
+      const { data: rows } = await admin
+        .from("payroll_receipts")
+        .select("total_percepciones, isr, imss_obrero, employee:employees(empresa)")
+        .in("payroll_period_id", periodIds);
+      for (const r of rows ?? []) {
+        const emp = (r.employee?.empresa || "HELIX-LAROSS").trim() || "HELIX-LAROSS";
+        if (!payrollSplit[emp]) payrollSplit[emp] = { nomina: 0, isr: 0, imss: 0 };
+        payrollSplit[emp].nomina += Number(r.total_percepciones ?? 0);
+        payrollSplit[emp].isr += Number(r.isr ?? 0);
+        payrollSplit[emp].imss += Number(r.imss_obrero ?? 0);
+      }
     }
 
+    function orZero(o: any) { return o ?? { nomina: 0, isr: 0, imss: 0 }; }
+    const hPay = orZero(payrollSplit["HELIX"]);
+    const lPay = orZero(payrollSplit["HELIX-LAROSS"]);
+
     return {
-      helix: split["HELIX"] ?? { nomina: 0, isr: 0, imss: 0, neto: 0 },
-      laross: split["HELIX-LAROSS"] ?? { nomina: 0, isr: 0, imss: 0, neto: 0 },
+      helix: { nomina: hPay.nomina, isr: hPay.isr, imss: hPay.imss, isn: isnPer * hRatio, honorarios: honorariosPer * hRatio },
+      laross: { nomina: lPay.nomina, isr: lPay.isr, imss: lPay.imss, isn: isnPer * lRatio, honorarios: honorariosPer * lRatio },
+      ratios: { helix: hCount, laross: lCount },
     };
   });
 

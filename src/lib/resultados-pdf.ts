@@ -23,7 +23,7 @@ type ErData = {
   utilidadNetaPer: number; utilidadNetaYTD: number;
 };
 
-type SplitData = { helix: { nomina: number; isr: number; imss: number; neto: number }; laross: { nomina: number; isr: number; imss: number; neto: number } };
+type SplitData = { helix: { nomina: number; isr: number; imss: number; isn: number; honorarios: number }; laross: { nomina: number; isr: number; imss: number; isn: number; honorarios: number } };
 
 function fm(n: number) { return MXN.format(n); }
 function pct(v: number, base: number) { return base !== 0 ? (v / base) * 100 : 0; }
@@ -214,6 +214,8 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
         ["Nómina", fm(split.helix.nomina), "", fm(split.laross.nomina), ""],
         ["ISR", fm(split.helix.isr), "", fm(split.laross.isr), ""],
         ["IMSS", fm(split.helix.imss), "", fm(split.laross.imss), ""],
+        ["ISN 3%", fm(split.helix.isn), "", fm(split.laross.isn), ""],
+        ["Honorarios", fm(split.helix.honorarios), "", fm(split.laross.honorarios), ""],
       ].map(row => row.map(c => ({ content: c, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 16] } }))),
       margin: { left: margin, right: margin },
       tableLineWidth: 0,
