@@ -2770,7 +2770,7 @@ export type Database = {
         | "noi_raw"
       import_status: "pendiente" | "procesando" | "completado" | "error"
       journal_status: "borrador" | "confirmada" | "cancelada"
-      journal_type: "ingreso" | "egreso" | "diario"
+      journal_type: "ingreso" | "egreso" | "diario" | "cheque" | "transferencia"
       org_request_status: "pendiente" | "aprobada" | "rechazada"
       payroll_period_status: "abierto" | "calculado" | "pagado" | "cerrado"
       payroll_periodicity: "semanal" | "catorcenal" | "quincenal" | "mensual"
@@ -2930,7 +2930,7 @@ export const Constants = {
       ],
       import_status: ["pendiente", "procesando", "completado", "error"],
       journal_status: ["borrador", "confirmada", "cancelada"],
-      journal_type: ["ingreso", "egreso", "diario"],
+      journal_type: ["ingreso", "egreso", "diario", "cheque", "transferencia"],
       org_request_status: ["pendiente", "aprobada", "rechazada"],
       payroll_period_status: ["abierto", "calculado", "pagado", "cerrado"],
       payroll_periodicity: ["semanal", "catorcenal", "quincenal", "mensual"],

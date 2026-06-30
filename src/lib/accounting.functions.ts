@@ -21,16 +21,18 @@ export const listAccounts = createServerFn({ method: "POST" })
 export const upsertAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({
-      organizationId: z.string().uuid(),
-      id: z.string().uuid().optional(),
-      codigo: z.string().min(1),
-      nombre: z.string().min(1),
-      codigo_agrupador: z.string().optional(),
-      naturaleza: z.enum(["deudora", "acreedora"]),
-      nivel: z.number().int().min(1).max(6).default(2),
-      acumulativa: z.boolean().default(false),
-    }).parse(i),
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        id: z.string().uuid().optional(),
+        codigo: z.string().min(1),
+        nombre: z.string().min(1),
+        codigo_agrupador: z.string().optional(),
+        naturaleza: z.enum(["deudora", "acreedora"]),
+        nivel: z.number().int().min(1).max(6).default(2),
+        acumulativa: z.boolean().default(false),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     const { organizationId, id, ...rest } = data;
@@ -40,7 +42,10 @@ export const upsertAccount = createServerFn({ method: "POST" })
       return { id };
     }
     const { data: created, error } = await context.supabase
-      .from("accounts").insert({ ...rest, organization_id: organizationId }).select("id").single();
+      .from("accounts")
+      .insert({ ...rest, organization_id: organizationId })
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: created.id };
   });
@@ -49,13 +54,23 @@ export const upsertAccount = createServerFn({ method: "POST" })
 export const listJournalEntries = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ organizationId: z.string().uuid(), desde: z.string().optional(), hasta: z.string().optional(), q: z.string().optional(), tipo: z.string().optional() }).parse(i),
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        desde: z.string().optional(),
+        hasta: z.string().optional(),
+        q: z.string().optional(),
+        tipo: z.string().optional(),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     let q = context.supabase
-      .from("journal_entries").select("*")
+      .from("journal_entries")
+      .select("*")
       .eq("organization_id", data.organizationId)
-      .order("fecha", { ascending: false }).order("numero", { ascending: false });
+      .order("fecha", { ascending: false })
+      .order("numero", { ascending: false });
     if (data.desde) q = q.gte("fecha", data.desde);
     if (data.hasta) q = q.lte("fecha", data.hasta);
     if (data.tipo) q = q.eq("tipo", data.tipo as any);
@@ -75,7 +90,7 @@ const lineSchema = z.object({
 const entrySchema = z.object({
   organizationId: z.string().uuid(),
   id: z.string().uuid().optional(),
-  tipo: z.enum(["ingreso", "egreso", "diario"]),
+  tipo: z.enum(["ingreso", "egreso", "diario", "cheque", "transferencia"]),
   fecha: z.string(),
   concepto: z.string().min(1),
   referencia: z.string().optional(),
@@ -90,32 +105,56 @@ export const upsertJournalEntry = createServerFn({ method: "POST" })
     const total_cargo = data.lines.reduce((s, l) => s + l.cargo, 0);
     const total_abono = data.lines.reduce((s, l) => s + l.abono, 0);
     if (Math.abs(total_cargo - total_abono) > 0.005) {
-      throw new Error(`La póliza no cuadra. Cargo ${total_cargo.toFixed(2)} ≠ Abono ${total_abono.toFixed(2)}`);
+      throw new Error(
+        `La póliza no cuadra. Cargo ${total_cargo.toFixed(2)} ≠ Abono ${total_abono.toFixed(2)}`,
+      );
     }
 
     let entryId = data.id;
     if (entryId) {
-      const { error } = await supabase.from("journal_entries").update({
-        tipo: data.tipo, fecha: data.fecha, concepto: data.concepto,
-        referencia: data.referencia, total_cargo, total_abono,
-      }).eq("id", entryId);
+      const { error } = await supabase
+        .from("journal_entries")
+        .update({
+          tipo: data.tipo,
+          fecha: data.fecha,
+          concepto: data.concepto,
+          referencia: data.referencia,
+          total_cargo,
+          total_abono,
+        })
+        .eq("id", entryId);
       if (error) throw new Error(error.message);
       await supabase.from("journal_lines").delete().eq("entry_id", entryId);
     } else {
       // next numero for tipo/year
       const year = new Date(data.fecha).getFullYear();
       const { data: max } = await supabase
-        .from("journal_entries").select("numero")
-        .eq("organization_id", data.organizationId).eq("tipo", data.tipo)
-        .gte("fecha", `${year}-01-01`).lte("fecha", `${year}-12-31`)
-        .order("numero", { ascending: false }).limit(1).maybeSingle();
+        .from("journal_entries")
+        .select("numero")
+        .eq("organization_id", data.organizationId)
+        .eq("tipo", data.tipo)
+        .gte("fecha", `${year}-01-01`)
+        .lte("fecha", `${year}-12-31`)
+        .order("numero", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       const numero = (max?.numero ?? 0) + 1;
-      const { data: created, error } = await supabase.from("journal_entries").insert({
-        organization_id: data.organizationId,
-        tipo: data.tipo, numero, fecha: data.fecha, concepto: data.concepto,
-        referencia: data.referencia, total_cargo, total_abono,
-        estatus: "confirmada", created_by: userId,
-      }).select("id").single();
+      const { data: created, error } = await supabase
+        .from("journal_entries")
+        .insert({
+          organization_id: data.organizationId,
+          tipo: data.tipo,
+          numero,
+          fecha: data.fecha,
+          concepto: data.concepto,
+          referencia: data.referencia,
+          total_cargo,
+          total_abono,
+          estatus: "confirmada",
+          created_by: userId,
+        })
+        .select("id")
+        .single();
       if (error) throw new Error(error.message);
       entryId = created.id;
     }
@@ -135,12 +174,32 @@ export const upsertJournalEntry = createServerFn({ method: "POST" })
     return { id: entryId, total_cargo, total_abono };
   });
 
+export const getJournalEntry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: entry, error } = await context.supabase
+      .from("journal_entries")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (error) throw new Error(error.message);
+    const { data: lines } = await context.supabase
+      .from("journal_lines")
+      .select("*")
+      .eq("entry_id", data.id)
+      .order("orden");
+    return { ...entry, lines: lines ?? [] };
+  });
+
 export const cancelJournalEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("journal_entries")
-      .update({ estatus: "cancelada" }).eq("id", data.id);
+    const { error } = await context.supabase
+      .from("journal_entries")
+      .update({ estatus: "cancelada" })
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -153,12 +212,16 @@ export const getBalanza = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: accts } = await supabase
-      .from("accounts").select("id, codigo, nombre, naturaleza")
-      .eq("organization_id", data.organizationId).order("codigo");
+      .from("accounts")
+      .select("id, codigo, nombre, naturaleza")
+      .eq("organization_id", data.organizationId)
+      .order("codigo");
 
     const { data: lines, error } = await supabase
       .from("journal_lines")
-      .select("account_id, cargo, abono, entry:journal_entries!inner(fecha, estatus, organization_id)")
+      .select(
+        "account_id, cargo, abono, entry:journal_entries!inner(fecha, estatus, organization_id)",
+      )
       .eq("entry.organization_id", data.organizationId)
       .gte("entry.fecha", data.desde)
       .lte("entry.fecha", data.hasta)
@@ -173,15 +236,29 @@ export const getBalanza = createServerFn({ method: "POST" })
       map[k].abono += Number(l.abono);
     });
 
-    return (accts ?? []).map((a) => {
-      const v = map[a.id] ?? { cargo: 0, abono: 0 };
-      const saldo = a.naturaleza === "deudora" ? v.cargo - v.abono : v.abono - v.cargo;
-      return { ...a, cargo: v.cargo, abono: v.abono, saldo };
-    }).filter((r) => r.cargo > 0 || r.abono > 0);
+    return (accts ?? [])
+      .map((a) => {
+        const v = map[a.id] ?? { cargo: 0, abono: 0 };
+        const saldo = a.naturaleza === "deudora" ? v.cargo - v.abono : v.abono - v.cargo;
+        return { ...a, cargo: v.cargo, abono: v.abono, saldo };
+      })
+      .filter((r) => r.cargo > 0 || r.abono > 0);
   });
 
 // ============ GET SALDOS ACUMULADOS (helper) ============
 async function getSaldosToMonth(supabase: any, orgId: string, ejercicio: number, mes: number) {
+  // Periodo 13 (cierre de ejercicio): si no hay saldos de periodo 13, usar periodo 12
+  let queryPer = mes;
+  if (mes === 13) {
+    const { count } = await supabase
+      .from("account_balances")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("ejercicio", ejercicio)
+      .eq("periodo", 13);
+    if (count === 0) queryPer = 12;
+  }
+
   const { data: accts } = await supabase
     .from("accounts")
     .select("id, codigo, nombre, naturaleza, nivel, acumulativa, codigo_agrupador")
@@ -194,7 +271,7 @@ async function getSaldosToMonth(supabase: any, orgId: string, ejercicio: number,
     .select("account_codigo, saldo_final")
     .eq("organization_id", orgId)
     .eq("ejercicio", ejercicio)
-    .eq("periodo", mes);
+    .eq("periodo", queryPer);
 
   const balMap: Record<string, number> = {};
   for (const b of bals ?? []) {
@@ -211,13 +288,31 @@ async function getSaldosToMonth(supabase: any, orgId: string, ejercicio: number,
 export const getEstadoResultados = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ organizationId: z.string().uuid(), ejercicio: z.number(), desdeMes: z.number(), hastaMes: z.number() }).parse(i),
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        ejercicio: z.number(),
+        desdeMes: z.number(),
+        hastaMes: z.number(),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const saldosHasta = await getSaldosToMonth(context.supabase, data.organizationId, data.ejercicio, data.hastaMes);
-    const saldosAnt = data.desdeMes > 1
-      ? await getSaldosToMonth(context.supabase, data.organizationId, data.ejercicio, data.desdeMes - 1)
-      : null;
+    const saldosHasta = await getSaldosToMonth(
+      context.supabase,
+      data.organizationId,
+      data.ejercicio,
+      data.hastaMes,
+    );
+    const saldosAnt =
+      data.desdeMes > 1
+        ? await getSaldosToMonth(
+            context.supabase,
+            data.organizationId,
+            data.ejercicio,
+            data.desdeMes - 1,
+          )
+        : null;
     const antMap: Record<string, number> = {};
     if (saldosAnt) {
       for (const s of saldosAnt) {
@@ -225,7 +320,9 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       }
     }
 
-    function signed(s: any) { return s.naturaleza === "deudora" ? -s.saldo : s.saldo; }
+    function signed(s: any) {
+      return s.naturaleza === "deudora" ? -s.saldo : s.saldo;
+    }
 
     // Gastos de operación sub-groups (6xxx)
     const gastosOpDef: Record<string, { label: string; prefix: string }> = {
@@ -260,22 +357,50 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
 
     // Pre-populate groups from ALL 6xxx/7xxx leaf accounts
     const allAccts = saldosHasta;
-    const gastosOp: Record<string, any[]> = { venta: [], admin: [], depreciacion: [], amortizacion: [], otros: [] };
-    const otrosGrupos: Record<string, any[]> = { productosFinancieros: [], gastosFinancieros: [], otrosProductos: [], otrosGastos: [] };
+    const gastosOp: Record<string, any[]> = {
+      venta: [],
+      admin: [],
+      depreciacion: [],
+      amortizacion: [],
+      otros: [],
+    };
+    const otrosGrupos: Record<string, any[]> = {
+      productosFinancieros: [],
+      gastosFinancieros: [],
+      otrosProductos: [],
+      otrosGastos: [],
+    };
     for (const a of allAccts) {
       const d = a.codigo.replace(/^0+/, "")[0];
       if (d === "6") {
         const grp = getGastoGroup(a.codigo);
-        if (gastosOp[grp]) gastosOp[grp].push({ codigo: a.codigo, nombre: a.nombre, perVal: 0, ytdVal: 0, perPct: 0, ytdPct: 0 });
+        if (gastosOp[grp])
+          gastosOp[grp].push({
+            codigo: a.codigo,
+            nombre: a.nombre,
+            perVal: 0,
+            ytdVal: 0,
+            perPct: 0,
+            ytdPct: 0,
+          });
       }
       if (d === "7") {
         const grp = getOtrosGroup(a.codigo);
-        if (grp && otrosGrupos[grp]) otrosGrupos[grp].push({ codigo: a.codigo, nombre: a.nombre, perVal: 0, ytdVal: 0, perPct: 0, ytdPct: 0 });
+        if (grp && otrosGrupos[grp])
+          otrosGrupos[grp].push({
+            codigo: a.codigo,
+            nombre: a.nombre,
+            perVal: 0,
+            ytdVal: 0,
+            perPct: 0,
+            ytdPct: 0,
+          });
       }
     }
 
     const cats: Record<string, any[]> = { "4": [], "5": [] };
-    let ventasPer = 0, ventasYTD = 0;
+    let ventasPer = 0,
+      ventasYTD = 0;
 
     for (const s of saldosHasta) {
       if (s.acumulativa) continue;
@@ -291,32 +416,58 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
           const ytdVal = s.naturaleza === "deudora" ? Math.abs(ytd) : ytd;
           const perVal = s.naturaleza === "deudora" ? Math.abs(per) : per;
           const existing = otrosGrupos[grp].find((x: any) => x.codigo === s.codigo);
-          if (existing) { existing.perVal = perVal; existing.ytdVal = ytdVal; }
+          if (existing) {
+            existing.perVal = perVal;
+            existing.ytdVal = ytdVal;
+          }
         }
         continue;
       }
 
       let key = d;
-      const ytdVal = (d === "5" || d === "6") ? Math.abs(ytd) : ytd;
-      const perVal = (d === "5" || d === "6") ? Math.abs(per) : per;
+      const ytdVal = d === "5" || d === "6" ? Math.abs(ytd) : ytd;
+      const perVal = d === "5" || d === "6" ? Math.abs(per) : per;
 
       if (d === "6") {
         const grp = getGastoGroup(s.codigo);
         if (gastosOp[grp]) {
           const existing = gastosOp[grp].find((x: any) => x.codigo === s.codigo);
-          if (existing) { existing.perVal = perVal; existing.ytdVal = ytdVal; }
+          if (existing) {
+            existing.perVal = perVal;
+            existing.ytdVal = ytdVal;
+          }
         }
       } else if (cats[key]) {
-        cats[key].push({ codigo: s.codigo, nombre: s.nombre, perVal, ytdVal, perPct: 0, ytdPct: 0 });
+        cats[key].push({
+          codigo: s.codigo,
+          nombre: s.nombre,
+          perVal,
+          ytdVal,
+          perPct: 0,
+          ytdPct: 0,
+        });
       }
-      if (key === "4") { ventasPer += perVal; ventasYTD += ytdVal; }
+      if (key === "4") {
+        ventasPer += perVal;
+        ventasYTD += ytdVal;
+      }
     }
 
-    function pct(v: number, base: number) { return base !== 0 ? (v / base) * 100 : 0; }
-    function addPct(arr: any[]) { arr.forEach((c) => { c.perPct = pct(c.perVal, ventasPer); c.ytdPct = pct(c.ytdVal, ventasYTD); }); }
-    function sum(arr: any[], f: string) { return arr.reduce((a: number, c: any) => a + c[f], 0); }
+    function pct(v: number, base: number) {
+      return base !== 0 ? (v / base) * 100 : 0;
+    }
+    function addPct(arr: any[]) {
+      arr.forEach((c) => {
+        c.perPct = pct(c.perVal, ventasPer);
+        c.ytdPct = pct(c.ytdVal, ventasYTD);
+      });
+    }
+    function sum(arr: any[], f: string) {
+      return arr.reduce((a: number, c: any) => a + c[f], 0);
+    }
 
-    addPct(cats["4"]); addPct(cats["5"]);
+    addPct(cats["4"]);
+    addPct(cats["5"]);
 
     // Flatten gastosOp for percentage + totals
     const gastosFlat: any[] = [];
@@ -324,7 +475,10 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
     for (const [k, items] of Object.entries(gastosOp)) {
       addPct(items);
       gastosFlat.push(...items);
-      gastosOpTotals[k] = { perVal: Math.abs(sum(items, "perVal")), ytdVal: Math.abs(sum(items, "ytdVal")) };
+      gastosOpTotals[k] = {
+        perVal: Math.abs(sum(items, "perVal")),
+        ytdVal: Math.abs(sum(items, "ytdVal")),
+      };
     }
 
     const otrosGrupoTotals: Record<string, { perVal: number; ytdVal: number }> = {};
@@ -339,10 +493,16 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
     const tCosYTD = Math.abs(sum(cats["5"], "ytdVal"));
     const tGasPer = Math.abs(sum(gastosFlat, "perVal"));
     const tGasYTD = Math.abs(sum(gastosFlat, "ytdVal"));
-    const tOIPer = sum(otrosGrupos.productosFinancieros, "perVal") + sum(otrosGrupos.otrosProductos, "perVal");
-    const tOIYTD = sum(otrosGrupos.productosFinancieros, "ytdVal") + sum(otrosGrupos.otrosProductos, "ytdVal");
-    const tOGPer = Math.abs(sum(otrosGrupos.gastosFinancieros, "perVal")) + Math.abs(sum(otrosGrupos.otrosGastos, "perVal"));
-    const tOGYTD = Math.abs(sum(otrosGrupos.gastosFinancieros, "ytdVal")) + Math.abs(sum(otrosGrupos.otrosGastos, "ytdVal"));
+    const tOIPer =
+      sum(otrosGrupos.productosFinancieros, "perVal") + sum(otrosGrupos.otrosProductos, "perVal");
+    const tOIYTD =
+      sum(otrosGrupos.productosFinancieros, "ytdVal") + sum(otrosGrupos.otrosProductos, "ytdVal");
+    const tOGPer =
+      Math.abs(sum(otrosGrupos.gastosFinancieros, "perVal")) +
+      Math.abs(sum(otrosGrupos.otrosGastos, "perVal"));
+    const tOGYTD =
+      Math.abs(sum(otrosGrupos.gastosFinancieros, "ytdVal")) +
+      Math.abs(sum(otrosGrupos.otrosGastos, "ytdVal"));
 
     const uBrutaPer = tIngPer - tCosPer;
     const uBrutaYTD = tIngYTD - tCosYTD;
@@ -352,15 +512,26 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
     const uNetaYTD = uOperYTD + tOIYTD - tOGYTD;
 
     return {
-      ingresos: cats["4"], costos: cats["5"],
-      gastosOp, gastosOpTotals, gastosOpDef,
-      otrosGrupos, otrosGrupoTotals, otrosDef,
-      ventasPer, ventasYTD,
-      totalIngresosPer: tIngPer, totalIngresosYTD: tIngYTD,
-      totalCostosPer: tCosPer, totalCostosYTD: tCosYTD,
-      totalGastosPer: tGasPer, totalGastosYTD: tGasYTD,
-      totalOtrosIngresosPer: tOIPer, totalOtrosIngresosYTD: tOIYTD,
-      totalOtrosGastosPer: tOGPer, totalOtrosGastosYTD: tOGYTD,
+      ingresos: cats["4"],
+      costos: cats["5"],
+      gastosOp,
+      gastosOpTotals,
+      gastosOpDef,
+      otrosGrupos,
+      otrosGrupoTotals,
+      otrosDef,
+      ventasPer,
+      ventasYTD,
+      totalIngresosPer: tIngPer,
+      totalIngresosYTD: tIngYTD,
+      totalCostosPer: tCosPer,
+      totalCostosYTD: tCosYTD,
+      totalGastosPer: tGasPer,
+      totalGastosYTD: tGasYTD,
+      totalOtrosIngresosPer: tOIPer,
+      totalOtrosIngresosYTD: tOIYTD,
+      totalOtrosGastosPer: tOGPer,
+      totalOtrosGastosYTD: tOGYTD,
       utilidadBrutaPer: uBrutaPer,
       utilidadBrutaYTD: uBrutaYTD,
       utilidadOperacionPer: uOperPer,
@@ -374,7 +545,14 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
 export const getHelixLarossSplit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ organizationId: z.string().uuid(), ejercicio: z.number(), desdeMes: z.number(), hastaMes: z.number() }).parse(i),
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        ejercicio: z.number(),
+        desdeMes: z.number(),
+        hastaMes: z.number(),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -386,17 +564,24 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
       .select("empresa")
       .eq("organization_id", data.organizationId)
       .eq("estatus", "activo");
-    let hCount = 0, lCount = 0;
+    let hCount = 0,
+      lCount = 0;
     for (const e of empCount ?? []) {
       const emp = (e.empresa || "HELIX-LAROSS").trim() || "HELIX-LAROSS";
-      if (emp === "HELIX") hCount++; else lCount++;
+      if (emp === "HELIX") hCount++;
+      else lCount++;
     }
     const totalEmp = hCount + lCount || 1;
     const hRatio = hCount / totalEmp;
     const lRatio = lCount / totalEmp;
 
     // Account balances for honorarios and ISN
-    const honorariosAccts = ["610003000000000000002", "610003100000000000002", "620002900000000000002", "620003000000000000002"];
+    const honorariosAccts = [
+      "610003000000000000002",
+      "610003100000000000002",
+      "620002900000000000002",
+      "620003000000000000002",
+    ];
     const isnAccts = ["610002000000000000002"];
     async function getBalSum(accts: string[], mes: number) {
       const { data: bals } = await admin
@@ -409,7 +594,8 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
       return (bals ?? []).reduce((s: number, b: any) => s + Number(b.saldo_final ?? 0), 0);
     }
     const honorariosHasta = await getBalSum(honorariosAccts, data.hastaMes);
-    const honorariosDesde = data.desdeMes > 1 ? await getBalSum(honorariosAccts, data.desdeMes - 1) : 0;
+    const honorariosDesde =
+      data.desdeMes > 1 ? await getBalSum(honorariosAccts, data.desdeMes - 1) : 0;
     const honorariosPer = honorariosHasta - honorariosDesde;
     const isnHasta = await getBalSum(isnAccts, data.hastaMes);
     const isnDesde = data.desdeMes > 1 ? await getBalSum(isnAccts, data.desdeMes - 1) : 0;
@@ -441,13 +627,27 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
       }
     }
 
-    function orZero(o: any) { return o ?? { nomina: 0, isr: 0, imss: 0 }; }
+    function orZero(o: any) {
+      return o ?? { nomina: 0, isr: 0, imss: 0 };
+    }
     const hPay = orZero(payrollSplit["HELIX"]);
     const lPay = orZero(payrollSplit["HELIX-LAROSS"]);
 
     return {
-      helix: { nomina: hPay.nomina, isr: hPay.isr, imss: hPay.imss, isn: isnPer * hRatio, honorarios: honorariosPer * hRatio },
-      laross: { nomina: lPay.nomina, isr: lPay.isr, imss: lPay.imss, isn: isnPer * lRatio, honorarios: honorariosPer * lRatio },
+      helix: {
+        nomina: hPay.nomina,
+        isr: hPay.isr,
+        imss: hPay.imss,
+        isn: isnPer * hRatio,
+        honorarios: honorariosPer * hRatio,
+      },
+      laross: {
+        nomina: lPay.nomina,
+        isr: lPay.isr,
+        imss: lPay.imss,
+        isn: isnPer * lRatio,
+        honorarios: honorariosPer * lRatio,
+      },
       ratios: { helix: hCount, laross: lCount },
     };
   });
@@ -456,10 +656,17 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
 export const getBalanceGeneral = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ organizationId: z.string().uuid(), ejercicio: z.number(), mes: z.number() }).parse(i),
+    z
+      .object({ organizationId: z.string().uuid(), ejercicio: z.number(), mes: z.number() })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const saldos = await getSaldosToMonth(context.supabase, data.organizationId, data.ejercicio, data.mes);
+    const saldos = await getSaldosToMonth(
+      context.supabase,
+      data.organizationId,
+      data.ejercicio,
+      data.mes,
+    );
 
     const activoCirculante: any[] = [];
     const activoNoCirculante: any[] = [];
@@ -467,29 +674,31 @@ export const getBalanceGeneral = createServerFn({ method: "POST" })
     const pasivoNoCirculante: any[] = [];
     const capital: any[] = [];
 
-    let totalActivo = 0, totalPasivo = 0, totalCapital = 0;
+    let totalActivo = 0,
+      totalPasivo = 0,
+      totalCapital = 0;
 
     for (const s of saldos) {
       if (s.acumulativa) continue;
-      const d = s.codigo.replace(/^0+/, '')[0];
+      const d = s.codigo.replace(/^0+/, "")[0];
       let signedSaldo: number;
-      if (d === '1') signedSaldo = s.naturaleza === 'deudora' ? s.saldo : -s.saldo;
-      else signedSaldo = s.naturaleza === 'deudora' ? -s.saldo : s.saldo;
+      if (d === "1") signedSaldo = s.naturaleza === "deudora" ? s.saldo : -s.saldo;
+      else signedSaldo = s.naturaleza === "deudora" ? -s.saldo : s.saldo;
 
       if (Math.abs(signedSaldo) < 0.01) continue;
 
       const item = { codigo: s.codigo, nombre: s.nombre, saldo: signedSaldo };
-      const p2 = s.codigo.replace(/^0+/, '').substring(0, 2);
+      const p2 = s.codigo.replace(/^0+/, "").substring(0, 2);
 
-      if (d === '1') {
-        if (['11','12','13','14'].includes(p2)) activoCirculante.push(item);
+      if (d === "1") {
+        if (["11", "12", "13", "14"].includes(p2)) activoCirculante.push(item);
         else activoNoCirculante.push(item);
         totalActivo += signedSaldo;
-      } else if (d === '2') {
-        if (['21','21'].includes(p2)) pasivoCirculante.push(item);
+      } else if (d === "2") {
+        if (["21", "21"].includes(p2)) pasivoCirculante.push(item);
         else pasivoNoCirculante.push(item);
         totalPasivo += signedSaldo;
-      } else if (d === '3') {
+      } else if (d === "3") {
         capital.push(item);
         totalCapital += signedSaldo;
       }
@@ -498,23 +707,27 @@ export const getBalanceGeneral = createServerFn({ method: "POST" })
     let utilidadNeta = 0;
     for (const s of saldos) {
       if (s.acumulativa) continue;
-      const d = s.codigo.replace(/^0+/, '')[0];
-      if (d !== '4' && d !== '5' && d !== '6' && d !== '7') continue;
-      if (d === '4') utilidadNeta += s.naturaleza === 'deudora' ? -s.saldo : s.saldo;
-      else if (d === '5') utilidadNeta -= s.naturaleza === 'deudora' ? -s.saldo : s.saldo;
-      else if (d === '6') utilidadNeta -= s.naturaleza === 'deudora' ? -s.saldo : s.saldo;
-      else if (d === '7') utilidadNeta += s.naturaleza === 'deudora' ? -s.saldo : s.saldo;
+      const d = s.codigo.replace(/^0+/, "")[0];
+      if (d !== "4" && d !== "5" && d !== "6" && d !== "7") continue;
+      if (d === "4") utilidadNeta += s.naturaleza === "deudora" ? -s.saldo : s.saldo;
+      else if (d === "5") utilidadNeta -= s.naturaleza === "deudora" ? -s.saldo : s.saldo;
+      else if (d === "6") utilidadNeta -= s.naturaleza === "deudora" ? -s.saldo : s.saldo;
+      else if (d === "7") utilidadNeta += s.naturaleza === "deudora" ? -s.saldo : s.saldo;
     }
     if (Math.abs(utilidadNeta) > 0.01) {
-      capital.push({ codigo: '', nombre: 'Utilidad del Ejercicio', saldo: utilidadNeta });
+      capital.push({ codigo: "", nombre: "Utilidad del Ejercicio", saldo: utilidadNeta });
       totalCapital += utilidadNeta;
     }
 
     return {
-      activoCirculante, activoNoCirculante,
-      pasivoCirculante, pasivoNoCirculante,
+      activoCirculante,
+      activoNoCirculante,
+      pasivoCirculante,
+      pasivoNoCirculante,
       capital,
-      totalActivo, totalPasivo, totalCapital,
+      totalActivo,
+      totalPasivo,
+      totalCapital,
       totalPasivoCapital: totalPasivo + totalCapital,
     };
   });
@@ -566,7 +779,9 @@ export const importLegacyData = createServerFn({ method: "POST" })
         codigo: String(c.codigo),
         nombre: String(c.nombre ?? c.codigo),
         codigo_agrupador: c.tipo_sat ? String(c.tipo_sat) : null,
-        naturaleza: (String(c.naturaleza).toUpperCase() === "A" ? "acreedora" : "deudora") as "acreedora" | "deudora",
+        naturaleza: (String(c.naturaleza).toUpperCase() === "A" ? "acreedora" : "deudora") as
+          | "acreedora"
+          | "deudora",
         nivel: Number(c.nivel ?? 1),
         acumulativa: Number(c.acepta_movimientos ?? 1) === 0,
         activa: c.activo === undefined ? true : !!Number(c.activo),
@@ -592,14 +807,29 @@ export const importLegacyData = createServerFn({ method: "POST" })
 
     // ---------- POLIZAS ----------
     const entryIdByLegacy = new Map<string, string>();
-    const tipoMap: Record<string, string> = { I: "ingreso", E: "egreso", D: "diario" };
+    const tipoMap: Record<string, string> = {
+      I: "ingreso",
+      E: "egreso",
+      D: "diario",
+      Ig: "ingreso",
+      Eg: "egreso",
+      Dr: "diario",
+      Ch: "cheque",
+      Tr: "transferencia",
+      O: "diario",
+    };
 
     if (polizas.length) {
       const rows = polizas.map((p) => ({
         legacy_id: p.id !== undefined ? String(p.id) : `${p.tipo}-${p.numero}-${p.fecha}`,
         row: {
           organization_id: orgId,
-          tipo: (tipoMap[String(p.tipo).toUpperCase()] ?? "diario") as "ingreso" | "egreso" | "diario",
+          tipo: (tipoMap[String(p.tipo).toUpperCase()] ?? "diario") as
+            | "ingreso"
+            | "egreso"
+            | "diario"
+            | "cheque"
+            | "transferencia",
           numero: Number(p.numero ?? 0),
           fecha: String(p.fecha),
           concepto: String(p.concepto ?? ""),
@@ -720,24 +950,56 @@ export const importLegacyData = createServerFn({ method: "POST" })
 
 // ============ EXPORT ALL DATA ============
 const TABLES_WITH_ORG = [
-  "accounts", "journal_entries", "journal_lines", "account_balances",
-  "employees", "payroll_receipts", "payroll_receipt_lines", "payroll_concepts",
-  "payroll_periods", "payroll_email_logs", "attendance_entries",
-  "customers", "products", "customer_items",
-  "cost_centers", "fiscal_years", "currencies",
-  "aspel_raw_imports", "aspel_raw_rows", "sat_account_map",
-  "journal_types_catalog", "fiscal_params",
+  "accounts",
+  "journal_entries",
+  "journal_lines",
+  "account_balances",
+  "employees",
+  "payroll_receipts",
+  "payroll_receipt_lines",
+  "payroll_concepts",
+  "payroll_periods",
+  "payroll_email_logs",
+  "attendance_entries",
+  "customers",
+  "products",
+  "customer_items",
+  "cost_centers",
+  "fiscal_years",
+  "currencies",
+  "aspel_raw_imports",
+  "aspel_raw_rows",
+  "sat_account_map",
+  "journal_types_catalog",
+  "fiscal_params",
 ] as const;
 
 const TABLES_GLOBAL = [
-  "organizations", "profiles", "organization_members", "org_modules",
-  "org_billing_config", "subscription_plans", "subscription_invoices",
-  "platform_admins", "incident_types",
-  "cfdi_stamps", "tax_tables", "vehicles", "operators",
-  "tax_filings", "imss_patrones", "imss_pagos", "imss_movimientos",
-  "imss_mensuales", "imss_mensual_detalle", "imss_bimestres",
-  "imss_bimestre_detalle", "imss_primas_rt", "stamp_usage_log",
-  "import_jobs", "organization_requests",
+  "organizations",
+  "profiles",
+  "organization_members",
+  "org_modules",
+  "org_billing_config",
+  "subscription_plans",
+  "subscription_invoices",
+  "platform_admins",
+  "incident_types",
+  "cfdi_stamps",
+  "tax_tables",
+  "vehicles",
+  "operators",
+  "tax_filings",
+  "imss_patrones",
+  "imss_pagos",
+  "imss_movimientos",
+  "imss_mensuales",
+  "imss_mensual_detalle",
+  "imss_bimestres",
+  "imss_bimestre_detalle",
+  "imss_primas_rt",
+  "stamp_usage_log",
+  "import_jobs",
+  "organization_requests",
 ] as const;
 
 async function fetchTable(supabase: SupabaseClient, table: string, orgId?: string) {
