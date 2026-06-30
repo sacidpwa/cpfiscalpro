@@ -507,8 +507,8 @@ export const getCfdiDownloadUrl = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const supabase = supabaseAdmin as any;
-    const { data: stamp, error } = await supabase
+    const admin = supabaseAdmin as any;
+    const { data: stamp, error } = await admin
       .from("cfdi_stamps")
       .select("organization_id, xml_path, pdf_path")
       .eq("id", data.stampId)
@@ -521,7 +521,7 @@ export const getCfdiDownloadUrl = createServerFn({ method: "POST" })
     const path = data.kind === "xml" ? stamp.xml_path : stamp.pdf_path;
     if (!path) throw new Error(`Archivo ${data.kind.toUpperCase()} no disponible`);
     const bucket = data.kind === "xml" ? "cfdi-xml" : "cfdi-pdf";
-    const { data: signed, error: se } = await supabase.storage.from(bucket).createSignedUrl(path, 300);
+    const { data: signed, error: se } = await admin.storage.from(bucket).createSignedUrl(path, 300);
     if (se || !signed?.signedUrl) throw new Error(se?.message ?? "Error al generar enlace de descarga");
     const resp = await fetch(signed.signedUrl);
     if (!resp.ok) throw new Error("Error al descargar el archivo del almacenamiento");

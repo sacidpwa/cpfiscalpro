@@ -34,8 +34,9 @@ let _supabaseAdmin: ReturnType<typeof createSupabaseAdminClient> | undefined;
 // SECURITY: Only use this for trusted server-side operations, never expose to client code
 // Import like: import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createSupabaseAdminClient>, {
-  get(_, prop, receiver) {
+  get(_, prop) {
     if (!_supabaseAdmin) _supabaseAdmin = createSupabaseAdminClient();
-    return Reflect.get(_supabaseAdmin, prop, receiver);
+    const v = Reflect.get(_supabaseAdmin!, prop);
+    return typeof v === "function" ? v.bind(_supabaseAdmin) : v;
   },
 });
