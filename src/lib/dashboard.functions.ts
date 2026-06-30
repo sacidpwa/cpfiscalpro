@@ -74,11 +74,11 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
     const sueldosAcctId = acctSueldos?.id;
 
     // 1. Saldos para el ER del mes seleccionado
+    // Cuando mes=1 (enero), saldosAnt=null porque los saldos de ingresos/gastos
+    // se reinician al iniciar un nuevo ejercicio en Aspel COI (igual que el ER)
     const [saldosMes, saldosAnt] = await Promise.all([
       getSaldos(supabase, data.organizationId, year, month),
-      month > 1
-        ? getSaldos(supabase, data.organizationId, year, month - 1)
-        : getSaldos(supabase, data.organizationId, year - 1, 12),
+      month > 1 ? getSaldos(supabase, data.organizationId, year, month - 1) : Promise.resolve(null),
     ]);
     const er = calcER(saldosMes, saldosAnt);
 
@@ -118,7 +118,7 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
         .from("journal_lines")
         .select("cargo, entry:journal_entries!inner(fecha, estatus, organization_id)")
         .eq("entry.organization_id", data.organizationId)
-        .eq("entry.estatus", "neq.cancelada")
+        .neq("entry.estatus", "cancelada")
         .gte("entry.fecha", startMonth)
         .lte("entry.fecha", endMonth)
         .eq("account_id", sueldosAcctId);
@@ -131,11 +131,11 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
       const d = new Date(year, month - 1 - i, 1);
       const tEj = d.getFullYear();
       const tMes = d.getMonth() + 1;
+      // Cuando tMes=1 (enero), saldosAnt=null porque los saldos de
+      // ingresos/gastos se reinician al iniciar un nuevo ejercicio
       const [tSaldos, tSaldosAnt] = await Promise.all([
         getSaldos(supabase, data.organizationId, tEj, tMes),
-        tMes > 1
-          ? getSaldos(supabase, data.organizationId, tEj, tMes - 1)
-          : getSaldos(supabase, data.organizationId, tEj - 1, 12),
+        tMes > 1 ? getSaldos(supabase, data.organizationId, tEj, tMes - 1) : Promise.resolve(null),
       ]);
       const tER = calcER(tSaldos, tSaldosAnt);
       const k = `${tEj}-${String(tMes).padStart(2, "0")}`;
@@ -158,7 +158,7 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
         .from("journal_lines")
         .select("cargo, entry:journal_entries!inner(fecha, estatus, organization_id)")
         .eq("entry.organization_id", data.organizationId)
-        .eq("entry.estatus", "neq.cancelada")
+        .neq("entry.estatus", "cancelada")
         .gte("entry.fecha", tStart)
         .lte("entry.fecha", tEnd)
         .eq("account_id", sueldosAcctId);
