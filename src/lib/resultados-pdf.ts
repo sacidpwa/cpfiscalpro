@@ -52,12 +52,38 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
     doc.text(`Generado: ${new Date().toLocaleString("es-MX")}`, margin, 104);
   }
 
+  const periodLabelH = `${desde === 1 ? 'Enero' : meses[desde-1]} - ${meses[hasta-1]}`;
+
   function sectionHead(label: string, color: [number, number, number]) {
     autoTable(doc, {
       startY: (doc as any).lastAutoTable?.finalY ?? 118,
       body: [[{ content: label, colSpan: 5, styles: { fillColor: color, textColor: 255, fontStyle: "bold", fontSize: 10, cellPadding: 5 } }]],
       margin: { left: margin, right: margin },
       tableLineWidth: 0,
+    });
+  }
+
+  function colRow() {
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable?.finalY ?? 118,
+      head: [
+        [
+          { content: "Cuenta", rowSpan: 2, styles: { halign: "left", fontStyle: "bold", fontSize: 7.5, fillColor: [240, 240, 245], textColor: 60 } },
+          { content: periodLabelH, colSpan: 2, styles: { halign: "center", fontStyle: "bold", fontSize: 7.5, fillColor: [240, 240, 245], textColor: 60 } },
+          { content: `Acumulado ${ejercicio}`, colSpan: 2, styles: { halign: "center", fontStyle: "bold", fontSize: 7.5, fillColor: [240, 240, 245], textColor: 60 } },
+        ],
+        [
+          { content: "Importe", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5, fillColor: [240, 240, 245], textColor: 60 } },
+          { content: "%", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5, fillColor: [240, 240, 245], textColor: 60 } },
+          { content: "Importe", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5, fillColor: [240, 240, 245], textColor: 60 } },
+          { content: "%", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5, fillColor: [240, 240, 245], textColor: 60 } },
+        ],
+      ],
+      margin: { left: margin, right: margin },
+      tableLineWidth: 0,
+      styles: { fontSize: 7.5, cellPadding: 3, lineColor: 200, lineWidth: 0.3 },
+      headStyles: { fillColor: [240, 240, 245], textColor: 60, lineWidth: 0 },
+      columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2, halign: "right" }, 2: { cellWidth: col3, halign: "right" }, 3: { cellWidth: col4, halign: "right" }, 4: { cellWidth: col5, halign: "right" } },
     });
   }
 
@@ -138,12 +164,14 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   // --- INGRESOS ---
   sectionHead("INGRESOS", [37, 99, 235]);
-  if (detalle) { for (const c of er.ingresos) itemRow(c); }
+  colRow();
+  for (const c of er.ingresos) itemRow(c);
   totalRow("Total Ingresos", er.totalIngresosPer, er.totalIngresosYTD, { color: [22, 163, 74], topBorder: true });
 
   // --- COSTOS ---
   sectionHead("COSTOS", [220, 38, 38]);
-  if (detalle) { for (const c of er.costos) itemRow(c); }
+  colRow();
+  for (const c of er.costos) itemRow(c);
   totalRow("Total Costos", -er.totalCostosPer, -er.totalCostosYTD, { color: [220, 38, 38], topBorder: true });
 
   // --- UTILIDAD BRUTA ---
@@ -152,6 +180,7 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   // --- GASTOS DE OPERACIÓN ---
   sectionHead("GASTOS DE OPERACIÓN", [217, 119, 6]);
+  colRow();
   for (const [key, def] of Object.entries(er.gastosOpDef)) {
     const items = er.gastosOp[key] || [];
     const hasMov = items.some((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01);
@@ -175,6 +204,7 @@ export function generateResultadosPDF(org: { razon_social: string; rfc: string; 
 
   // --- OTROS INGRESOS Y GASTOS ---
   sectionHead("OTROS INGRESOS Y GASTOS", [5, 150, 105]);
+  colRow();
   for (const [key, def] of Object.entries(er.otrosDef)) {
     const items = er.otrosGrupos[key] || [];
     const hasMov = items.some((c: any) => Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01);
