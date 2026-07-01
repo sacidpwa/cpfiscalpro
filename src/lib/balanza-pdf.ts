@@ -40,12 +40,12 @@ export function generateBalanzaPDF(
 
   // Encabezado
   doc.setFont("helvetica", "bold").setFontSize(14);
-  doc.text(org.razon_social || "—", margin, 40);
+  doc.text(org.razon_social || "-", margin, 40);
   doc.setFont("helvetica", "normal").setFontSize(9);
-  doc.text(`RFC: ${org.rfc || "—"}`, margin, 56);
-  if (org.regimen_fiscal) doc.text(`Régimen: ${org.regimen_fiscal}`, margin, 68);
+  doc.text(`RFC: ${org.rfc || "-"}`, margin, 56);
+  if (org.regimen_fiscal) doc.text(`Regimen: ${org.regimen_fiscal}`, margin, 68);
   doc.setFont("helvetica", "bold").setFontSize(12);
-  doc.text("Balanza de Comprobación", margin, 84);
+  doc.text("Balanza de Comprobacion", margin, 84);
   doc.setFont("helvetica", "normal").setFontSize(9);
   doc.text(
     `Periodo: ${fmtFecha(desde)} a ${fmtFecha(hasta)}`,
@@ -59,7 +59,7 @@ export function generateBalanzaPDF(
     startY,
     head: [
       [
-        { content: "Código", styles: { halign: "left", fontStyle: "bold", fontSize: 8, fillColor: [240, 240, 245], textColor: 60 } },
+        { content: "Codigo", styles: { halign: "left", fontStyle: "bold", fontSize: 8, fillColor: [240, 240, 245], textColor: 60 } },
         { content: "Cuenta", styles: { halign: "left", fontStyle: "bold", fontSize: 8, fillColor: [240, 240, 245], textColor: 60 } },
         { content: "Cargos", styles: { halign: "right", fontStyle: "bold", fontSize: 8, fillColor: [240, 240, 245], textColor: 60 } },
         { content: "Abonos", styles: { halign: "right", fontStyle: "bold", fontSize: 8, fillColor: [240, 240, 245], textColor: 60 } },
@@ -153,7 +153,7 @@ export function generateBalanzaPDF(
       [
         {
           content: cuadreOk
-            ? "✓ Cuadre correcto (Σ Cargos = Σ Abonos)"
+            ? "Cuadre correcto (Cargos = Abonos)"
             : `Diferencia: ${fm(totC - totA)}`,
           colSpan: 5,
           styles: {

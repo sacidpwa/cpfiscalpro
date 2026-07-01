@@ -51,9 +51,9 @@ export function generateBalanceGeneralPDF(
 
   // Encabezado
   doc.setFont("helvetica", "bold").setFontSize(14).setTextColor(TEXTO[0], TEXTO[1], TEXTO[2]);
-  doc.text(org.razon_social || "—", margin, 40);
+  doc.text(org.razon_social || "-", margin, 40);
   doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(TEXTO_CLARO[0], TEXTO_CLARO[1], TEXTO_CLARO[2]);
-  doc.text(`RFC: ${org.rfc || "—"}`, margin, 56);
+  doc.text(`RFC: ${org.rfc || "-"}`, margin, 56);
   if (org.regimen_fiscal) doc.text(`Régimen: ${org.regimen_fiscal}`, margin, 68);
   doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(TEXTO[0], TEXTO[1], TEXTO[2]);
   doc.text("Balance General", margin, 84);
@@ -149,7 +149,7 @@ export function generateBalanceGeneralPDF(
     const body: any[][] = [];
     body.push([
       { content: g.prefix, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 8], textColor: GRIS_OSC, fontStyle: "bold" } },
-      { content: (hasMultiple ? (isCollapsed ? "▶ " : "▼ ") : "") + g.label, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 4], textColor: GRIS_OSC, fontStyle: "bold" } },
+      { content: (hasMultiple ? (isCollapsed ? "+ " : "- ") : "") + g.label, styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 4], textColor: GRIS_OSC, fontStyle: "bold" } },
       { content: fm(g.total), styles: { halign: "right", fontSize: 7.5, cellPadding: [2, 4, 2, 4], textColor: GRIS_OSC, fontStyle: "bold" } },
     ]);
     if (hasMultiple && !isCollapsed) {
@@ -226,8 +226,8 @@ export function generateBalanceGeneralPDF(
   y = totalRow("TOTAL CAPITAL CONTABLE", bg.totalCapital, y);
   y += 8;
 
-  // Total Pasivo + Capital (cuadre) - fontSize 10 para que quepa
-  y = totalRow("TOTAL PASIVO + CAPITAL", bg.totalPasivoCapital, y, 10);
+  // Total Pasivo y Capital (cuadre) - fontSize 9 para que quepa
+  y = totalRow("TOTAL PASIVO Y CAPITAL", bg.totalPasivoCapital, y, 9);
 
   // Diferencia (cuadre)
   const diferencia = bg.totalActivo - bg.totalPasivoCapital;
@@ -235,7 +235,7 @@ export function generateBalanceGeneralPDF(
     startY: y + 6,
     body: [[
       { content: Math.abs(diferencia) < 0.01
-          ? "Cuadre correcto (Activo = Pasivo + Capital)"
+          ? "Cuadre correcto (Activo = Pasivo y Capital)"
           : `Diferencia: ${fm(diferencia)}`,
         styles: { fontStyle: "bold", fontSize: 9, textColor: Math.abs(diferencia) < 0.01 ? GRIS_OSC : [140, 60, 60], cellPadding: [4, 4, 4, 8] } },
       { content: "", styles: { cellPadding: 0 } },
