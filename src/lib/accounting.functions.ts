@@ -575,7 +575,7 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
 
-    // Employee count by empresa
+    // Employee count by empresa (for proportional split)
     const { data: empCount } = await admin
       .from("employees")
       .select("empresa")
@@ -592,15 +592,21 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
     const hRatio = hCount / totalEmp;
     const lRatio = lCount / totalEmp;
 
-    // Account balances for honorarios and ISN
+    // Cuentas para el split (todas desde account_balances)
+    const nominaAccts = ["610000100000000000002", "610000200000000000002"]; // Sueldos + Asimilados
+    const isrAccts = ["215000100000000000002", "215000200000000000002"]; // ISR retenido sueldos + asimilados
+    const imssAccts = ["610001700000000000002"]; // Cuota IMSS (gasto patronal)
+    const isnAccts = ["610002000000000000002"]; // Impuesto sobre nómina
     const honorariosAccts = [
       "610003000000000000002",
       "610003100000000000002",
       "620002900000000000002",
       "620003000000000000002",
     ];
-    const isnAccts = ["610002000000000000002"];
+
     async function getBalSum(accts: string[], mes: number) {
+      // mes=1 (enero): no hay mes anterior dentro del ejercicio, delta = saldo del mes
+      if (mes === 0 || mes < 1) return 0;
       const { data: bals } = await admin
         .from("account_balances")
         .select("account_codigo, saldo_final")
@@ -610,58 +616,38 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
         .in("account_codigo", accts);
       return (bals ?? []).reduce((s: number, b: any) => s + Number(b.saldo_final ?? 0), 0);
     }
-    const honorariosHasta = await getBalSum(honorariosAccts, data.hastaMes);
-    const honorariosDesde =
+
+    // Calcular delta del periodo (hastaMes - desdeMes+1, o hastaMes si desdeMes=1)
+    const hasta = await getBalSum(
+      [...nominaAccts, ...isrAccts, ...imssAccts, ...isnAccts, ...honorariosAccts],
+      data.hastaMes,
+    );
+    // Para el "anterior": si desdeMes=1, anterior = 0 (inicio de ejercicio)
+    const antNomina = data.desdeMes > 1 ? await getBalSum(nominaAccts, data.desdeMes - 1) : 0;
+    const antIsr = data.desdeMes > 1 ? await getBalSum(isrAccts, data.desdeMes - 1) : 0;
+    const antImss = data.desdeMes > 1 ? await getBalSum(imssAccts, data.desdeMes - 1) : 0;
+    const antIsn = data.desdeMes > 1 ? await getBalSum(isnAccts, data.desdeMes - 1) : 0;
+    const antHonorarios =
       data.desdeMes > 1 ? await getBalSum(honorariosAccts, data.desdeMes - 1) : 0;
-    const honorariosPer = honorariosHasta - honorariosDesde;
-    const isnHasta = await getBalSum(isnAccts, data.hastaMes);
-    const isnDesde = data.desdeMes > 1 ? await getBalSum(isnAccts, data.desdeMes - 1) : 0;
-    const isnPer = isnHasta - isnDesde;
 
-    // Payroll split by empresa
-    const desde = `${data.ejercicio}-${String(data.desdeMes).padStart(2, "0")}-01`;
-    const hasta = new Date(data.ejercicio, data.hastaMes, 0).toISOString().slice(0, 10);
-    const { data: periods } = await admin
-      .from("payroll_periods")
-      .select("id")
-      .eq("organization_id", data.organizationId)
-      .eq("ejercicio", data.ejercicio)
-      .gte("fecha_pago", desde)
-      .lte("fecha_pago", hasta);
-    const periodIds = (periods ?? []).map((p: any) => p.id);
-    const payrollSplit: Record<string, { nomina: number; isr: number; imss: number }> = {};
-    if (periodIds.length) {
-      const { data: rows } = await admin
-        .from("payroll_receipts")
-        .select("total_percepciones, isr, imss_obrero, employee:employees(empresa)")
-        .in("payroll_period_id", periodIds);
-      for (const r of rows ?? []) {
-        const emp = (r.employee?.empresa || "HELIX-LAROSS").trim() || "HELIX-LAROSS";
-        if (!payrollSplit[emp]) payrollSplit[emp] = { nomina: 0, isr: 0, imss: 0 };
-        payrollSplit[emp].nomina += Number(r.total_percepciones ?? 0);
-        payrollSplit[emp].isr += Number(r.isr ?? 0);
-        payrollSplit[emp].imss += Number(r.imss_obrero ?? 0);
-      }
-    }
-
-    function orZero(o: any) {
-      return o ?? { nomina: 0, isr: 0, imss: 0 };
-    }
-    const hPay = orZero(payrollSplit["HELIX"]);
-    const lPay = orZero(payrollSplit["HELIX-LAROSS"]);
+    const nominaPer = (await getBalSum(nominaAccts, data.hastaMes)) - antNomina;
+    const isrPer = (await getBalSum(isrAccts, data.hastaMes)) - antIsr;
+    const imssPer = (await getBalSum(imssAccts, data.hastaMes)) - antImss;
+    const isnPer = (await getBalSum(isnAccts, data.hastaMes)) - antIsn;
+    const honorariosPer = (await getBalSum(honorariosAccts, data.hastaMes)) - antHonorarios;
 
     return {
       helix: {
-        nomina: hPay.nomina,
-        isr: hPay.isr,
-        imss: hPay.imss,
+        nomina: nominaPer * hRatio,
+        isr: Math.abs(isrPer) * hRatio,
+        imss: imssPer * hRatio,
         isn: isnPer * hRatio,
         honorarios: honorariosPer * hRatio,
       },
       laross: {
-        nomina: lPay.nomina,
-        isr: lPay.isr,
-        imss: lPay.imss,
+        nomina: nominaPer * lRatio,
+        isr: Math.abs(isrPer) * lRatio,
+        imss: imssPer * lRatio,
         isn: isnPer * lRatio,
         honorarios: honorariosPer * lRatio,
       },
