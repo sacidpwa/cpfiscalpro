@@ -18,6 +18,23 @@ export const listAccounts = createServerFn({ method: "POST" })
     return rows ?? [];
   });
 
+export const getAccountSaldos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ organizationId: z.string().uuid(), codigo: z.string() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("account_balances")
+      .select("ejercicio, periodo, saldo_final")
+      .eq("organization_id", data.organizationId)
+      .eq("account_codigo", data.codigo)
+      .order("ejercicio", { ascending: false })
+      .order("periodo", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
 export const upsertAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
