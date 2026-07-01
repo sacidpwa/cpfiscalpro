@@ -30,12 +30,13 @@ async function getSaldos(supabase: any, orgId: string, ejercicio: number, mes: n
   return map;
 }
 
-// calcER ahora recibe naturalezaMap para aplicar el signo correctamente
-// (igual que getEstadoResultados: deudora = -saldo, acreedora = +saldo)
+// calcER recibe naturalezaMap y acumulativaSet para replicar exactamente
+// la lógica de getEstadoResultados (saltar padres, aplicar signo por naturaleza)
 function calcER(
   saldos: Record<string, number>,
   saldosAnt: Record<string, number> | null,
   naturalezaMap: Record<string, string>,
+  acumulativaSet: Set<string>,
 ) {
   let ingresos = 0,
     costos = 0,
@@ -43,6 +44,7 @@ function calcER(
     otrosIng = 0,
     otrosGast = 0;
   for (const [codigo, saldo] of Object.entries(saldos)) {
+    if (acumulativaSet.has(codigo)) continue; // saltar cuentas padre (igual que ER)
     const d = codigo.replace(/^0+/, "")[0];
     if (d !== "4" && d !== "5" && d !== "6" && d !== "7") continue;
     const nat = naturalezaMap[codigo] ?? "deudora";
@@ -82,14 +84,16 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
     const startMonth = `${year}-${String(month).padStart(2, "0")}-01`;
     const endMonth = new Date(year, month, 0).toISOString().slice(0, 10);
 
-    // Cargar cuentas con naturaleza (necesario para calcER)
+    // Cargar cuentas con naturaleza y flag acumulativa (necesario para calcER)
     const { data: accts } = await supabase
       .from("accounts")
-      .select("codigo, naturaleza")
+      .select("codigo, naturaleza, acumulativa")
       .eq("organization_id", data.organizationId);
     const naturalezaMap: Record<string, string> = {};
+    const acumulativaSet: Set<string> = new Set();
     (accts ?? []).forEach((a: any) => {
       naturalezaMap[a.codigo] = a.naturaleza;
+      if (a.acumulativa) acumulativaSet.add(a.codigo);
     });
 
     // Obtener ID de cuenta de sueldos
@@ -101,7 +105,7 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
       getSaldos(supabase, data.organizationId, year, month),
       month > 1 ? getSaldos(supabase, data.organizationId, year, month - 1) : Promise.resolve(null),
     ]);
-    const er = calcER(saldosMes, saldosAnt, naturalezaMap);
+    const er = calcER(saldosMes, saldosAnt, naturalezaMap, acumulativaSet);
 
     // 2. Conteos de pólizas y empleados
     const [emp, polizas, periodos, lineasCount] = await Promise.all([
@@ -156,7 +160,7 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
         getSaldos(supabase, data.organizationId, tEj, tMes),
         tMes > 1 ? getSaldos(supabase, data.organizationId, tEj, tMes - 1) : Promise.resolve(null),
       ]);
-      const tER = calcER(tSaldos, tSaldosAnt, naturalezaMap);
+      const tER = calcER(tSaldos, tSaldosAnt, naturalezaMap, acumulativaSet);
       const k = `${tEj}-${String(tMes).padStart(2, "0")}`;
       trend.push({
         mes: k,
