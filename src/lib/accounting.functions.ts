@@ -593,7 +593,7 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
     const lRatio = lCount / totalEmp;
 
     // Cuentas para el split (todas desde account_balances)
-    const nominaAccts = ["610000100000000000002", "610000200000000000002"]; // Sueldos + Asimilados
+    const nominaAccts = ["610000100000000000002"]; // Sueldos y Salarios (sin asimilados)
     const isrAccts = ["215000100000000000002", "215000200000000000002"]; // ISR retenido sueldos + asimilados
     const imssAccts = ["610001700000000000002"]; // Cuota IMSS (gasto patronal)
     const isnAccts = ["610002000000000000002"]; // Impuesto sobre nómina
