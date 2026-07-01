@@ -446,6 +446,36 @@ function Resultados() {
                       </td>
                       <td></td>
                     </tr>
+                    {/* Ingresos */}
+                    <tr style={{ background: "#f5f3ff" }}>
+                      <td
+                        className="px-3 pl-5 py-1 text-xs font-semibold"
+                        style={{ color: "#6b21a8" }}
+                      >
+                        INGRESOS
+                      </td>
+                      <td colSpan={4}></td>
+                    </tr>
+                    <HLRow
+                      label="Devoluciones y descuentos"
+                      h={splitData.helix.devoluciones}
+                      l={splitData.laross.devoluciones}
+                    />
+                    <HLRow
+                      label="Ingresos OFIC. IMPORTACIONES"
+                      h={splitData.helix.ingresosCliente}
+                      l={splitData.laross.ingresosCliente}
+                    />
+                    {/* Gastos */}
+                    <tr style={{ background: "#f5f3ff" }}>
+                      <td
+                        className="px-3 pl-5 py-1 text-xs font-semibold"
+                        style={{ color: "#6b21a8" }}
+                      >
+                        GASTOS
+                      </td>
+                      <td colSpan={4}></td>
+                    </tr>
                     <HLRow label="Nómina" h={splitData.helix.nomina} l={splitData.laross.nomina} />
                     <HLRow
                       label="Honorarios Profesionales"

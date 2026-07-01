@@ -634,6 +634,36 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
     const isnPer = (await getBalSum(isnAccts, data.hastaMes)) - antIsn;
     const honorariosPer = (await getBalSum(honorariosAccts, data.hastaMes)) - antHonorarios;
 
+    // Devoluciones y descuentos (cuenta 4200-002, deudora contra-revenue)
+    const devolAccts = ["420000200000000000002"];
+    const antDevol = data.desdeMes > 1 ? await getBalSum(devolAccts, data.desdeMes - 1) : 0;
+    const devolPer = (await getBalSum(devolAccts, data.hastaMes)) - antDevol;
+
+    // Ingresos por cliente (OFICINA DE IMPORTACIONES Y COMERCIO) — sumar cargos del periodo desde journal_lines
+    const { data: clienteAcct } = await admin
+      .from("accounts")
+      .select("id")
+      .eq("organization_id", data.organizationId)
+      .eq("codigo", "115000100300000000003")
+      .maybeSingle();
+    let ingresosClientePer = 0;
+    if (clienteAcct) {
+      const fdesde = `${data.ejercicio}-${String(data.desdeMes).padStart(2, "0")}-01`;
+      const fhasta = new Date(data.ejercicio, data.hastaMes, 0).toISOString().slice(0, 10);
+      const { data: cliLines } = await admin
+        .from("journal_lines")
+        .select("cargo, entry:journal_entries!inner(fecha, estatus, organization_id)")
+        .eq("entry.organization_id", data.organizationId)
+        .neq("entry.estatus", "cancelada")
+        .gte("entry.fecha", fdesde)
+        .lte("entry.fecha", fhasta)
+        .eq("account_id", clienteAcct.id);
+      ingresosClientePer = (cliLines ?? []).reduce(
+        (s: number, l: any) => s + Number(l.cargo ?? 0),
+        0,
+      );
+    }
+
     return {
       helix: {
         nomina: nominaPer * hRatio,
@@ -641,6 +671,8 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
         imss: imssPer * hRatio,
         isn: isnPer * hRatio,
         honorarios: honorariosPer * hRatio,
+        devoluciones: Math.abs(devolPer) * hRatio,
+        ingresosCliente: ingresosClientePer * hRatio,
       },
       laross: {
         nomina: nominaPer * lRatio,
@@ -648,6 +680,8 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
         imss: imssPer * lRatio,
         isn: isnPer * lRatio,
         honorarios: honorariosPer * lRatio,
+        devoluciones: Math.abs(devolPer) * lRatio,
+        ingresosCliente: ingresosClientePer * lRatio,
       },
       ratios: { helix: hCount, laross: lCount },
     };

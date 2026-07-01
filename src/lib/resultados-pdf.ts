@@ -41,8 +41,24 @@ type ErData = {
 };
 
 type SplitData = {
-  helix: { nomina: number; asimilados: number; imss: number; isn: number; honorarios: number };
-  laross: { nomina: number; asimilados: number; imss: number; isn: number; honorarios: number };
+  helix: {
+    nomina: number;
+    asimilados: number;
+    imss: number;
+    isn: number;
+    honorarios: number;
+    devoluciones: number;
+    ingresosCliente: number;
+  };
+  laross: {
+    nomina: number;
+    asimilados: number;
+    imss: number;
+    isn: number;
+    honorarios: number;
+    devoluciones: number;
+    ingresosCliente: number;
+  };
 };
 
 function fm(n: number) {
@@ -497,6 +513,20 @@ export function generateResultadosPDF(
         ],
       ],
       body: [
+        [
+          "Devoluciones y descuentos",
+          fm(split.helix.devoluciones),
+          "",
+          fm(split.laross.devoluciones),
+          "",
+        ],
+        [
+          "Ingresos OFIC. IMPORTACIONES",
+          fm(split.helix.ingresosCliente),
+          "",
+          fm(split.laross.ingresosCliente),
+          "",
+        ],
         ["Nómina", fm(split.helix.nomina), "", fm(split.laross.nomina), ""],
         [
           "Honorarios Profesionales",
