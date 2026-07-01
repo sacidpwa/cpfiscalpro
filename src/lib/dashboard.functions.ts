@@ -87,7 +87,7 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
     // Cargar cuentas con naturaleza y flag acumulativa (necesario para calcER)
     const { data: accts } = await supabase
       .from("accounts")
-      .select("codigo, naturaleza, acumulativa")
+      .select("id, codigo, naturaleza, acumulativa")
       .eq("organization_id", data.organizationId);
     const naturalezaMap: Record<string, string> = {};
     const acumulativaSet: Set<string> = new Set();
