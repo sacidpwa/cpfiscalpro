@@ -528,6 +528,31 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
     const uNetaPer = uOperPer + tOIPer - tOGPer;
     const uNetaYTD = uOperYTD + tOIYTD - tOGYTD;
 
+    // Ingresos por cliente (OFIC. IMPORTACIONES) — desde journal_lines, solo informativo
+    let ingresosClientePer = 0;
+    const { data: clienteAcct } = await context.supabase
+      .from("accounts")
+      .select("id")
+      .eq("organization_id", data.organizationId)
+      .eq("codigo", "115000100300000000003")
+      .maybeSingle();
+    if (clienteAcct) {
+      const fdesde = `${data.ejercicio}-${String(data.desdeMes).padStart(2, "0")}-01`;
+      const fhasta = new Date(data.ejercicio, data.hastaMes, 0).toISOString().slice(0, 10);
+      const { data: cliLines } = await context.supabase
+        .from("journal_lines")
+        .select("cargo, entry:journal_entries!inner(fecha, estatus, organization_id)")
+        .eq("entry.organization_id", data.organizationId)
+        .neq("entry.estatus", "cancelada")
+        .gte("entry.fecha", fdesde)
+        .lte("entry.fecha", fhasta)
+        .eq("account_id", clienteAcct.id);
+      ingresosClientePer = (cliLines ?? []).reduce(
+        (s: number, l: any) => s + Number(l.cargo ?? 0),
+        0,
+      );
+    }
+
     return {
       ingresos: cats["4"],
       costos: cats["5"],
@@ -539,6 +564,7 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       otrosDef,
       ventasPer,
       ventasYTD,
+      ingresosClientePer,
       totalIngresosPer: tIngPer,
       totalIngresosYTD: tIngYTD,
       totalCostosPer: tCosPer,

@@ -234,6 +234,28 @@ function Resultados() {
                     </td>
                   </tr>
                 ))}
+                {/* Ingreso por cliente (informativo, no suma al total) */}
+                {er.ingresosClientePer > 0 && (
+                  <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>
+                    <td className="px-3 pl-6 font-mono text-xs" style={{ color: "#15803d" }}>
+                      1150-003 — INGRESOS OFIC. IMPORTACIONES (info)
+                    </td>
+                    <td
+                      className="px-3 text-right font-mono font-medium"
+                      style={{ color: "#15803d" }}
+                    >
+                      ${fmt(er.ingresosClientePer)}
+                    </td>
+                    <td className="px-3 text-right font-mono text-muted-foreground">—</td>
+                    <td
+                      className="px-3 text-right font-mono font-medium"
+                      style={{ color: "#15803d" }}
+                    >
+                      ${fmt(er.ingresosClientePer)}
+                    </td>
+                    <td className="px-3 text-right font-mono text-muted-foreground">—</td>
+                  </tr>
+                )}
                 <tr className="font-bold" style={{ borderTop: "2px solid #2563eb" }}>
                   <td className="px-3 py-2">Total Ingresos</td>
                   <td className="px-3 text-right font-mono" style={{ color: "#16a34a" }}>
