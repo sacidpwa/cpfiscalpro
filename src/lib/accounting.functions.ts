@@ -5,6 +5,146 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const orgId = z.object({ organizationId: z.string().uuid() });
 
+// ============ RECALCULAR SALDOS ACUMULADOS ============
+// Recalcula account_balances a partir de journal_lines para un ejercicio.
+// Para cada periodo P (1..13), saldo_final = saldo_inicial_acumulado_hasta_P-1 + Σ(cargos-abonos) del periodo P
+// donde saldo_inicial_acumulado considera saldos importados de años anteriores (account_balances de periodos previos
+// que ya existían). La primera vez que se corre para un ejercicio, se preservan los saldo_inicial de DB y se
+// recompute cargos/abonos/saldo_final por periodo.
+async function recalcularSaldos(
+  supabase: SupabaseClient,
+  organizationId: string,
+  ejercicio: number,
+) {
+  // 1) Todas las cuentas activas con su naturaleza
+  const { data: accts } = await supabase
+    .from("accounts")
+    .select("id, codigo, naturaleza")
+    .eq("organization_id", organizationId)
+    .eq("activa", true);
+  const acctMap: Record<string, { id: string; naturaleza: string }> = {};
+  (accts ?? []).forEach((a: any) => (acctMap[a.codigo] = { id: a.id, naturaleza: a.naturaleza }));
+
+  // 2) Saldo inicial de cada cuenta al inicio del ejercicio:
+  //    = saldo_final del periodo 13 del ejercicio anterior si existe, sino periodo 12, sino 0.
+  //    Esto permite arrastrar saldos de balance (cuentas 1/2/3) correctamente.
+  //    Para cuentas de resultados (4-7) el saldo inicial debe ser 0 al inicio de nuevo ejercicio.
+  const saldoInicialMap: Record<string, number> = {};
+  for (const codigo of Object.keys(acctMap)) {
+    const d = codigo.replace(/^0+/, "")[0];
+    if (["4", "5", "6", "7", "8", "9"].includes(d)) {
+      saldoInicialMap[codigo] = 0;
+      continue;
+    }
+    // Buscar saldo final del ejercicio anterior (periodo 13 o 12)
+    let sAnt = 0;
+    for (const perAnt of [13, 12]) {
+      const { data: b } = await supabase
+        .from("account_balances")
+        .select("saldo_final")
+        .eq("organization_id", organizationId)
+        .eq("account_codigo", codigo)
+        .eq("ejercicio", ejercicio - 1)
+        .eq("periodo", perAnt)
+        .maybeSingle();
+      if (b) {
+        sAnt = Number(b.saldo_final ?? 0);
+        break;
+      }
+    }
+    saldoInicialMap[codigo] = sAnt;
+  }
+
+  // 3) Cargar TODAS las pólizas no canceladas del ejercicio, con sus líneas (paginado)
+  const entryIds: string[] = [];
+  let off = 0;
+  while (true) {
+    const { data: chunk } = await supabase
+      .from("journal_entries")
+      .select("id, fecha, estatus")
+      .eq("organization_id", organizationId)
+      .gte("fecha", `${ejercicio}-01-01`)
+      .lte("fecha", `${ejercicio}-12-31`)
+      .neq("estatus", "cancelada")
+      .range(off, off + 999);
+    if (!chunk || chunk.length === 0) break;
+    for (const e of chunk as any[]) entryIds.push(e.id);
+    if (chunk.length < 1000) break;
+    off += 1000;
+  }
+  if (entryIds.length === 0) return { periodos: 0, cuentas: 0 };
+
+  const linesByAccountPeriod: Record<string, Record<number, { cargo: number; abono: number }>> = {};
+  for (let i = 0; i < entryIds.length; i += 200) {
+    const chunk = entryIds.slice(i, i + 200);
+    const { data: lines } = await supabase
+      .from("journal_lines")
+      .select("account_id, cargo, abono, entry:journal_entries!inner(fecha, estatus, organization_id)")
+      .in("entry_id", chunk)
+      .eq("entry.organization_id", organizationId)
+      .neq("entry.estatus", "cancelada");
+    for (const l of (lines ?? []) as any[]) {
+      const fecha = (l.entry as any)?.fecha;
+      if (!fecha) continue;
+      const mes = Number(String(fecha).slice(5, 7));
+      const acctId = l.account_id;
+      // Buscar codigo por id
+      const codigo = Object.keys(acctMap).find((c) => acctMap[c].id === acctId);
+      if (!codigo) continue;
+      if (!linesByAccountPeriod[codigo]) linesByAccountPeriod[codigo] = {};
+      if (!linesByAccountPeriod[codigo][mes]) linesByAccountPeriod[codigo][mes] = { cargo: 0, abono: 0 };
+      linesByAccountPeriod[codigo][mes].cargo += Number(l.cargo ?? 0);
+      linesByAccountPeriod[codigo][mes].abono += Number(l.abono ?? 0);
+    }
+  }
+
+  // 4) Para cada cuenta y cada periodo 1..13, calcular saldo_final acumulado
+  //    saldo_final[P] = saldo_final[P-1] + (cargo - abono) del periodo P
+  //    Si el periodo 13 no tiene líneas propias, se replica el saldo del periodo 12 (cierre).
+  const upserts: any[] = [];
+  for (const codigo of Object.keys(acctMap)) {
+    const nat = acctMap[codigo].naturaleza;
+    // signedDelta: para deudora, cargo-abono; para acreedora, abono-cargo
+    const periodMovs = linesByAccountPeriod[codigo] || {};
+    let saldoAcum = saldoInicialMap[codigo] ?? 0;
+    for (let p = 1; p <= 13; p++) {
+      const mov = periodMovs[p] || { cargo: 0, abono: 0 };
+      // Para periodo 13 (cierre), normalmente no hay movs; usar el acumulado al 12
+      if (p === 13) {
+        // Saldo al cierre = saldo acum al 12 (ya calculado en iteración anterior)
+        // Solo registrar si hay saldos en el ejercicio
+      } else {
+        const signedDelta = nat === "deudora" ? mov.cargo - mov.abono : mov.abono - mov.cargo;
+        saldoAcum += signedDelta;
+      }
+      const saldoFinalP = p === 13 ? saldoAcum : saldoAcum;
+      upserts.push({
+        organization_id: organizationId,
+        account_codigo: codigo,
+        ejercicio,
+        periodo: p,
+        saldo_inicial: p === 1 ? saldoInicialMap[codigo] : 0,
+        cargos: mov.cargo,
+        abonos: mov.abono,
+        saldo_final: saldoFinalP,
+        moneda: null,
+      });
+    }
+  }
+
+  // 5) Persistir en lotes (upsert con onConflict)
+  let upserted = 0;
+  for (let i = 0; i < upserts.length; i += 500) {
+    const chunk = upserts.slice(i, i + 500);
+    const { error } = await supabase
+      .from("account_balances")
+      .upsert(chunk, { onConflict: "organization_id,account_codigo,ejercicio,periodo" });
+    if (error) throw new Error(`recalcularSaldos upsert: ${error.message}`);
+    upserted += chunk.length;
+  }
+  return { periodos: 13, cuentas: Object.keys(acctMap).length, upserted };
+}
+
 export const listAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => orgId.parse(i))
@@ -188,6 +328,13 @@ export const upsertJournalEntry = createServerFn({ method: "POST" })
       })),
     );
     if (lerr) throw new Error(lerr.message);
+    // Recalcular saldos acumulados del ejercicio (account_balances) tras afectar póliza
+    try {
+      const year = new Date(data.fecha).getFullYear();
+      await recalcularSaldos(supabase, data.organizationId, year);
+    } catch (e: any) {
+      console.warn("recalcularSaldos falló (no bloqueante):", e.message);
+    }
     return { id: entryId, total_cargo, total_abono };
   });
 
@@ -213,11 +360,27 @@ export const cancelJournalEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { supabase } = context;
+    // Obtener la fecha y org de la póliza antes de cancelar para recalcular saldos después
+    const { data: entry } = await supabase
+      .from("journal_entries")
+      .select("id, fecha, organization_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    const { error } = await supabase
       .from("journal_entries")
       .update({ estatus: "cancelada" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+    // Recalcular saldos del ejercicio si tenemos info
+    if (entry?.fecha && entry?.organization_id) {
+      try {
+        const year = new Date(entry.fecha).getFullYear();
+        await recalcularSaldos(supabase as any, entry.organization_id, year);
+      } catch (e: any) {
+        console.warn("recalcularSaldos (cancel) falló:", e.message);
+      }
+    }
     return { ok: true };
   });
 
@@ -553,6 +716,19 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       );
     }
 
+    // Honorarios Profesionales (asimilados a salarios) — informativo para mostrar en INGRESOS
+    let asimiladosPer = 0;
+    let asimiladosYTD = 0;
+    for (const s of saldosHasta) {
+      if (s.acumulativa) continue;
+      if (s.codigo !== "610000200000000000002") continue;
+      const ytd = s.naturaleza === "deudora" ? -s.saldo : s.saldo;
+      const per = ytd - (antMap[s.codigo] || 0);
+      asimiladosYTD = Math.abs(ytd);
+      asimiladosPer = Math.abs(per);
+      break;
+    }
+
     return {
       ingresos: cats["4"],
       costos: cats["5"],
@@ -565,6 +741,8 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       ventasPer,
       ventasYTD,
       ingresosClientePer,
+      asimiladosPer,
+      asimiladosYTD,
       totalIngresosPer: tIngPer,
       totalIngresosYTD: tIngYTD,
       totalCostosPer: tCosPer,
@@ -657,7 +835,8 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
     const nominaPer = (await getBalSum(nominaAccts, data.hastaMes)) - antNomina;
     const asimiladosPer = (await getBalSum(asimiladosAccts, data.hastaMes)) - antAsimilados;
     const imssPer = (await getBalSum(imssAccts, data.hastaMes)) - antImss;
-    const isnPer = (await getBalSum(isnAccts, data.hastaMes)) - antIsn;
+    // ISN calculado al 3% de la nómina (sueldos + asimilados), no del saldo de cuenta 6100020
+    const isnPer = 0.03 * (nominaPer + asimiladosPer);
     const honorariosPer = (await getBalSum(honorariosAccts, data.hastaMes)) - antHonorarios;
 
     // Devoluciones y descuentos (cuenta 4200-002, deudora contra-revenue)
@@ -742,9 +921,12 @@ export const getBalanceGeneral = createServerFn({ method: "POST" })
     for (const s of saldos) {
       if (s.acumulativa) continue;
       const d = s.codigo.replace(/^0+/, "")[0];
-      let signedSaldo: number;
-      if (d === "1") signedSaldo = s.naturaleza === "deudora" ? s.saldo : -s.saldo;
-      else signedSaldo = s.naturaleza === "deudora" ? -s.saldo : s.saldo;
+      // saldo_final viene firmado por naturaleza en account_balances:
+      //   deudora  -> cargo - abono (positivo cuando hay más cargo)
+      //   acreedora -> abono - cargo (positivo cuando hay más abono)
+      // El importador legacy de Aspel puede tener signos inconsistentes,
+      // pero nuestro recalcularSaldos los firma correctamente. Usamos el saldo tal cual.
+      const signedSaldo: number = s.saldo;
 
       if (Math.abs(signedSaldo) < 0.01) continue;
 
@@ -752,11 +934,15 @@ export const getBalanceGeneral = createServerFn({ method: "POST" })
       const p2 = s.codigo.replace(/^0+/, "").substring(0, 2);
 
       if (d === "1") {
-        if (["11", "12", "13", "14"].includes(p2)) activoCirculante.push(item);
+        // Activo circulante: 11 (caja/bancos), 12 (impuestos a favor/pagos anticipados)
+        // Activo no circulante: 13 (propiedades/activo fijo), 14 (cargos diferidos), 15+, 16+, 17+
+        if (["11", "12"].includes(p2)) activoCirculante.push(item);
         else activoNoCirculante.push(item);
         totalActivo += signedSaldo;
       } else if (d === "2") {
-        if (["21", "21"].includes(p2)) pasivoCirculante.push(item);
+        // Pasivo circulante: 21 (proveedores/acreedores/impuestos por pagar)
+        // Pasivo no circulante: 22+ (créditos hipotecarios)
+        if (p2 === "21") pasivoCirculante.push(item);
         else pasivoNoCirculante.push(item);
         totalPasivo += signedSaldo;
       } else if (d === "3") {
@@ -765,15 +951,15 @@ export const getBalanceGeneral = createServerFn({ method: "POST" })
       }
     }
 
+    // Utilidad del ejercicio = Σ (cuentas acreedoras: +saldo) + Σ (cuentas deudoras: -saldo)
+    // Aplica a 4-7 (ingresos acreed, costos deud, gastos deud, otros).
+    // El bug previo restaba -(saldo) para 5/6 deudoras, lo que SUMABA costos/gastos.
     let utilidadNeta = 0;
     for (const s of saldos) {
       if (s.acumulativa) continue;
       const d = s.codigo.replace(/^0+/, "")[0];
       if (d !== "4" && d !== "5" && d !== "6" && d !== "7") continue;
-      if (d === "4") utilidadNeta += s.naturaleza === "deudora" ? -s.saldo : s.saldo;
-      else if (d === "5") utilidadNeta -= s.naturaleza === "deudora" ? -s.saldo : s.saldo;
-      else if (d === "6") utilidadNeta -= s.naturaleza === "deudora" ? -s.saldo : s.saldo;
-      else if (d === "7") utilidadNeta += s.naturaleza === "deudora" ? -s.saldo : s.saldo;
+      utilidadNeta += s.naturaleza === "deudora" ? -s.saldo : s.saldo;
     }
     if (Math.abs(utilidadNeta) > 0.01) {
       capital.push({ codigo: "", nombre: "Utilidad del Ejercicio", saldo: utilidadNeta });
@@ -1234,13 +1420,16 @@ export const getFlujoEfectivo = createServerFn({ method: "POST" })
     const deltaAnticiposProveedores = sumByPrefix("1215", false);
 
     const deltaCuentasPorPagar = sumByPrefix("211", false);
-    const deltaIvaPorTrasladar = sumByPrefix("213", false);
+    // IVA por trasladar = IVA cobrado, ahora correctamente en 218 (Impuestos trasladados cobrados)
+    const deltaIvaPorTrasladar = sumByPrefix("218", false);
+    // Impuestos por pagar: 214 (IVA/ISR/ISN por pagar) + 217 (provisiones IMSS/SAR/INFONAVIT)
     const deltaIsrPorPagar = sumByPrefix("214", false);
     const deltaRetenciones = sumByPrefix("215", false);
     const deltaNominaPorPagar = sumByPrefix("216", false);
     const deltaImpuestosPorPagar = sumByPrefix("217", false);
-    const deltaOtroPasivo = sumByPrefix("218", false) + sumByPrefix("219", false);
-    const deltaCreditosDiferidos = sumByPrefix("220", false);
+    // Otro pasivo: anticipos de clientes (219). Los créditos diferidos 220 son hipotecarios -> financiamiento.
+    const deltaOtroPasivo = sumByPrefix("219", false);
+    const deltaCreditosDiferidos = 0;
 
     const flujoOperacion =
       utilidadNeta +
@@ -1268,9 +1457,25 @@ export const getFlujoEfectivo = createServerFn({ method: "POST" })
       deltaActivoFijo + deltaInversiones + deltaDeudoresDiversos + deltaDocumentosCobrar;
 
     // ====== FINANCIAMIENTO ======
-    const deltaPrestamosBancarios = sumByPrefix("218", false);
-    const deltaCapital = sumByPrefix("3", false);
-    const flujoFinanciamiento = deltaPrestamosBancarios + deltaCapital;
+    // Documentos por pagar (213) = préstamos bancarios + tarjeta de crédito + préstamos particulares
+    const deltaPrestamosBancarios = sumByPrefix("213", false);
+    // Capital contable (3xx) EXCLUYENDO el resultado del ejercicio actual (34) para no duplicar
+    // la utilidad neta que ya se contó en el bloque de operación (cuentas 4-7).
+    function sumByPrefixExcluding(prefix: string, exclude: string[], saltarAcumulativas = false): number {
+      let total = 0;
+      for (const cod of Object.keys(allSaldosFin)) {
+        if (!cod.startsWith(prefix)) continue;
+        if (exclude.some((p) => cod.startsWith(p))) continue;
+        const a = acctMap[cod];
+        if (!a) continue;
+        if (saltarAcumulativas && a.acumulativa) continue;
+        total += delta(cod);
+      }
+      return total;
+    }
+    const deltaCapital = sumByPrefixExcluding("3", ["34"], false);
+    const deltaCreditosHipotecarios = sumByPrefix("220", false);
+    const flujoFinanciamiento = deltaPrestamosBancarios + deltaCapital + deltaCreditosHipotecarios;
 
     // ====== RESULTADO ======
     const flujoNeto = flujoOperacion + flujoInversion + flujoFinanciamiento;
@@ -1308,6 +1513,7 @@ export const getFlujoEfectivo = createServerFn({ method: "POST" })
       financiamiento: {
         deltaPrestamosBancarios,
         deltaCapital,
+        deltaCreditosHipotecarios,
         total: flujoFinanciamiento,
       },
       flujoNeto,

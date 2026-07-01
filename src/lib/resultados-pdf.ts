@@ -22,6 +22,9 @@ type ErData = {
   otrosDef: Record<string, { label: string; prefix: string }>;
   ventasPer: number;
   ventasYTD: number;
+  ingresosClientePer?: number;
+  asimiladosPer?: number;
+  asimiladosYTD?: number;
   totalIngresosPer: number;
   totalIngresosYTD: number;
   totalCostosPer: number;
@@ -428,6 +431,44 @@ export function generateResultadosPDF(
   // --- INGRESOS ---
   sectionHead("INGRESOS", [37, 99, 235]);
   for (const c of er.ingresos) itemRow(c);
+  // Ingreso por cliente (informativo)
+  if (split) {
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable?.finalY ?? 118,
+      body: [
+        [
+          { content: "1150-003 — INGRESOS OFIC. IMPORTACIONES (info)", styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 20], textColor: [21, 128, 61] } },
+          { content: fm(er.ingresosClientePer ?? 0), styles: { halign: "right", fontSize: 7.5, textColor: [21, 128, 61] } },
+          { content: "—", styles: { halign: "right", fontSize: 7.5, textColor: 130 } },
+          { content: fm(er.ingresosClientePer ?? 0), styles: { halign: "right", fontSize: 7.5, textColor: [21, 128, 61] } },
+          { content: "—", styles: { halign: "right", fontSize: 7.5, textColor: 130 } },
+        ],
+      ],
+      margin: { left: margin, right: margin },
+      tableLineWidth: 0,
+      styles: { lineColor: 235, lineWidth: 0.3 },
+      columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2, halign: "right" }, 2: { cellWidth: col3, halign: "right" }, 3: { cellWidth: col4, halign: "right" }, 4: { cellWidth: col5, halign: "right" } },
+    });
+  }
+  // Honorarios Profesionales (asimilados) — informativo
+  if (split) {
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable?.finalY ?? 118,
+      body: [
+        [
+          { content: "6100-002 — HONORARIOS PROFESIONALES (info)", styles: { fontSize: 7.5, cellPadding: [2, 4, 2, 20], textColor: [21, 128, 61] } },
+          { content: fm(er.asimiladosPer ?? 0), styles: { halign: "right", fontSize: 7.5, textColor: [21, 128, 61] } },
+          { content: "—", styles: { halign: "right", fontSize: 7.5, textColor: 130 } },
+          { content: fm(er.asimiladosYTD ?? 0), styles: { halign: "right", fontSize: 7.5, textColor: [21, 128, 61] } },
+          { content: "—", styles: { halign: "right", fontSize: 7.5, textColor: 130 } },
+        ],
+      ],
+      margin: { left: margin, right: margin },
+      tableLineWidth: 0,
+      styles: { lineColor: 235, lineWidth: 0.3 },
+      columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2, halign: "right" }, 2: { cellWidth: col3, halign: "right" }, 3: { cellWidth: col4, halign: "right" }, 4: { cellWidth: col5, halign: "right" } },
+    });
+  }
   totalRow("Total Ingresos", er.totalIngresosPer, er.totalIngresosYTD, {
     color: [22, 163, 74],
     topBorder: true,
@@ -528,13 +569,6 @@ export function generateResultadosPDF(
           "",
         ],
         ["Nómina", fm(split.helix.nomina), "", fm(split.laross.nomina), ""],
-        [
-          "Honorarios Profesionales",
-          fm(split.helix.asimilados),
-          "",
-          fm(split.laross.asimilados),
-          "",
-        ],
         ["IMSS", fm(split.helix.imss), "", fm(split.laross.imss), ""],
         ["ISN 3%", fm(split.helix.isn), "", fm(split.laross.isn), ""],
         ["Honorarios", fm(split.helix.honorarios), "", fm(split.laross.honorarios), ""],

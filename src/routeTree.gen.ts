@@ -22,6 +22,7 @@ import { Route as AuthenticatedAppPolizasRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppNominaRouteImport } from './routes/_authenticated/app/nomina'
 import { Route as AuthenticatedAppImportarLegacyRouteImport } from './routes/_authenticated/app/importar-legacy'
 import { Route as AuthenticatedAppImportarRouteImport } from './routes/_authenticated/app/importar'
+import { Route as AuthenticatedAppFlujoEfectivoRouteImport } from './routes/_authenticated/app/flujo-efectivo'
 import { Route as AuthenticatedAppExportarRouteImport } from './routes/_authenticated/app/exportar'
 import { Route as AuthenticatedAppEmpleadosRouteImport } from './routes/_authenticated/app/empleados'
 import { Route as AuthenticatedAppDeclaracionesRouteImport } from './routes/_authenticated/app/declaraciones'
@@ -122,6 +123,12 @@ const AuthenticatedAppImportarRoute =
   AuthenticatedAppImportarRouteImport.update({
     id: '/app/importar',
     path: '/app/importar',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppFlujoEfectivoRoute =
+  AuthenticatedAppFlujoEfectivoRouteImport.update({
+    id: '/app/flujo-efectivo',
+    path: '/app/flujo-efectivo',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAppExportarRoute =
@@ -347,6 +354,7 @@ export interface FileRoutesByFullPath {
   '/app/declaraciones': typeof AuthenticatedAppDeclaracionesRoute
   '/app/empleados': typeof AuthenticatedAppEmpleadosRoute
   '/app/exportar': typeof AuthenticatedAppExportarRoute
+  '/app/flujo-efectivo': typeof AuthenticatedAppFlujoEfectivoRoute
   '/app/importar': typeof AuthenticatedAppImportarRoute
   '/app/importar-legacy': typeof AuthenticatedAppImportarLegacyRoute
   '/app/nomina': typeof AuthenticatedAppNominaRoute
@@ -394,6 +402,7 @@ export interface FileRoutesByTo {
   '/app/declaraciones': typeof AuthenticatedAppDeclaracionesRoute
   '/app/empleados': typeof AuthenticatedAppEmpleadosRoute
   '/app/exportar': typeof AuthenticatedAppExportarRoute
+  '/app/flujo-efectivo': typeof AuthenticatedAppFlujoEfectivoRoute
   '/app/importar': typeof AuthenticatedAppImportarRoute
   '/app/importar-legacy': typeof AuthenticatedAppImportarLegacyRoute
   '/app/nomina': typeof AuthenticatedAppNominaRoute
@@ -441,6 +450,7 @@ export interface FileRoutesById {
   '/_authenticated/app/declaraciones': typeof AuthenticatedAppDeclaracionesRoute
   '/_authenticated/app/empleados': typeof AuthenticatedAppEmpleadosRoute
   '/_authenticated/app/exportar': typeof AuthenticatedAppExportarRoute
+  '/_authenticated/app/flujo-efectivo': typeof AuthenticatedAppFlujoEfectivoRoute
   '/_authenticated/app/importar': typeof AuthenticatedAppImportarRoute
   '/_authenticated/app/importar-legacy': typeof AuthenticatedAppImportarLegacyRoute
   '/_authenticated/app/nomina': typeof AuthenticatedAppNominaRoute
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/app/declaraciones'
     | '/app/empleados'
     | '/app/exportar'
+    | '/app/flujo-efectivo'
     | '/app/importar'
     | '/app/importar-legacy'
     | '/app/nomina'
@@ -538,6 +549,7 @@ export interface FileRouteTypes {
     | '/app/declaraciones'
     | '/app/empleados'
     | '/app/exportar'
+    | '/app/flujo-efectivo'
     | '/app/importar'
     | '/app/importar-legacy'
     | '/app/nomina'
@@ -584,6 +596,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/declaraciones'
     | '/_authenticated/app/empleados'
     | '/_authenticated/app/exportar'
+    | '/_authenticated/app/flujo-efectivo'
     | '/_authenticated/app/importar'
     | '/_authenticated/app/importar-legacy'
     | '/_authenticated/app/nomina'
@@ -709,6 +722,13 @@ declare module '@tanstack/react-router' {
       path: '/app/importar'
       fullPath: '/app/importar'
       preLoaderRoute: typeof AuthenticatedAppImportarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/flujo-efectivo': {
+      id: '/_authenticated/app/flujo-efectivo'
+      path: '/app/flujo-efectivo'
+      fullPath: '/app/flujo-efectivo'
+      preLoaderRoute: typeof AuthenticatedAppFlujoEfectivoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/app/exportar': {
@@ -1069,6 +1089,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppDeclaracionesRoute: typeof AuthenticatedAppDeclaracionesRoute
   AuthenticatedAppEmpleadosRoute: typeof AuthenticatedAppEmpleadosRoute
   AuthenticatedAppExportarRoute: typeof AuthenticatedAppExportarRoute
+  AuthenticatedAppFlujoEfectivoRoute: typeof AuthenticatedAppFlujoEfectivoRoute
   AuthenticatedAppImportarRoute: typeof AuthenticatedAppImportarRoute
   AuthenticatedAppImportarLegacyRoute: typeof AuthenticatedAppImportarLegacyRoute
   AuthenticatedAppNominaRoute: typeof AuthenticatedAppNominaRoute
@@ -1095,6 +1116,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppDeclaracionesRoute: AuthenticatedAppDeclaracionesRoute,
   AuthenticatedAppEmpleadosRoute: AuthenticatedAppEmpleadosRoute,
   AuthenticatedAppExportarRoute: AuthenticatedAppExportarRoute,
+  AuthenticatedAppFlujoEfectivoRoute: AuthenticatedAppFlujoEfectivoRoute,
   AuthenticatedAppImportarRoute: AuthenticatedAppImportarRoute,
   AuthenticatedAppImportarLegacyRoute: AuthenticatedAppImportarLegacyRoute,
   AuthenticatedAppNominaRoute: AuthenticatedAppNominaRoute,

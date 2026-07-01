@@ -235,7 +235,7 @@ function Resultados() {
                   </tr>
                 ))}
                 {/* Ingreso por cliente (informativo, no suma al total) — solo con toggle HELIX-LAROSS */}
-                {splitOn && er.ingresosClientePer > 0 && (
+                {splitOn && (
                   <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>
                     <td className="px-3 pl-6 font-mono text-xs" style={{ color: "#15803d" }}>
                       1150-003 — INGRESOS OFIC. IMPORTACIONES (info)
@@ -252,6 +252,28 @@ function Resultados() {
                       style={{ color: "#15803d" }}
                     >
                       ${fmt(er.ingresosClientePer)}
+                    </td>
+                    <td className="px-3 text-right font-mono text-muted-foreground">—</td>
+                  </tr>
+                )}
+                {/* Honorarios Profesionales (asimilados) — informativo, no suma al total */}
+                {splitOn && (
+                  <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>
+                    <td className="px-3 pl-6 font-mono text-xs" style={{ color: "#15803d" }}>
+                      6100-002 — HONORARIOS PROFESIONALES (info)
+                    </td>
+                    <td
+                      className="px-3 text-right font-mono font-medium"
+                      style={{ color: "#15803d" }}
+                    >
+                      ${fmt(er.asimiladosPer)}
+                    </td>
+                    <td className="px-3 text-right font-mono text-muted-foreground">—</td>
+                    <td
+                      className="px-3 text-right font-mono font-medium"
+                      style={{ color: "#15803d" }}
+                    >
+                      ${fmt(er.asimiladosYTD)}
                     </td>
                     <td className="px-3 text-right font-mono text-muted-foreground">—</td>
                   </tr>
@@ -499,11 +521,6 @@ function Resultados() {
                       <td colSpan={4}></td>
                     </tr>
                     <HLRow label="Nómina" h={splitData.helix.nomina} l={splitData.laross.nomina} />
-                    <HLRow
-                      label="Honorarios Profesionales"
-                      h={splitData.helix.asimilados}
-                      l={splitData.laross.asimilados}
-                    />
                     <HLRow label="IMSS" h={splitData.helix.imss} l={splitData.laross.imss} />
                     <HLRow label="ISN 3%" h={splitData.helix.isn} l={splitData.laross.isn} />
                     <HLRow

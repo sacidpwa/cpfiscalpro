@@ -2,10 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
+import { toast } from "sonner";
 import { getBalanza } from "@/lib/accounting.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader } from "@/components/app-ui";
 import { fmtMoney } from "@/lib/format";
+import { FileDown } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/balanza")({
   component: Balanza,
@@ -27,9 +29,34 @@ function Balanza() {
   const totC = data?.reduce((s: number, r: any) => s + r.cargo, 0) ?? 0;
   const totA = data?.reduce((s: number, r: any) => s + r.abono, 0) ?? 0;
 
+  async function downloadPdf() {
+    if (!data?.length) return;
+    const { generateBalanzaPDF } = await import("@/lib/balanza-pdf");
+    const t = toast.loading("Generando PDF…");
+    try {
+      generateBalanzaPDF(org, data, desde, hasta);
+      toast.success("PDF generado", { id: t });
+    } catch (e: any) {
+      toast.error(e.message ?? "Error", { id: t });
+    }
+  }
+
   return (
     <div>
-      <PageHeader title="Balanza de comprobación" description="Saldo por cuenta en el periodo seleccionado" />
+      <PageHeader
+        title="Balanza de comprobación"
+        description="Saldo por cuenta en el periodo seleccionado"
+        actions={
+          data?.length ? (
+            <button
+              onClick={downloadPdf}
+              className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs font-medium hover:bg-secondary"
+            >
+              <FileDown className="h-3.5 w-3.5" /> Descargar PDF
+            </button>
+          ) : undefined
+        }
+      />
       <div className="space-y-4 p-8">
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
           <label className="block text-xs"><span className="mb-1 block text-muted-foreground">Desde</span><input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="rounded-md border bg-background px-2 py-1.5 text-sm"/></label>
