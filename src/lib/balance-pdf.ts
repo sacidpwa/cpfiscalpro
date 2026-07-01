@@ -26,12 +26,12 @@ const meses = [
 ];
 
 // Colores sobrios (grises)
-const GRIS_OSC = [60, 60, 70] as [number, number, number];
-const GRIS_MED = [100, 100, 110] as [number, number, number];
+const GRIS_OSC = [90, 90, 100] as [number, number, number];
+const GRIS_MED = [120, 120, 130] as [number, number, number];
 const GRIS_CLARO = [200, 200, 205] as [number, number, number];
-const GRIS_BG = [240, 240, 243] as [number, number, number];
-const TEXTO = [40, 40, 50] as [number, number, number];
-const TEXTO_CLARO = [90, 90, 100] as [number, number, number];
+const GRIS_BG = [235, 235, 240] as [number, number, number];
+const TEXTO = [50, 50, 60] as [number, number, number];
+const TEXTO_CLARO = [100, 100, 110] as [number, number, number];
 
 export function generateBalanceGeneralPDF(
   org: { razon_social: string; rfc: string; regimen_fiscal?: string | null },
@@ -80,13 +80,14 @@ export function generateBalanceGeneralPDF(
   function sectionHead(label: string, startY: number) {
     autoTable(doc, {
       startY,
-      body: [[{
-        content: label,
-        colSpan: 3,
-        styles: { fillColor: GRIS_OSC, textColor: 255, fontStyle: "bold", fontSize: 9.5, cellPadding: 5 },
-      }]],
+      body: [[
+        { content: label, styles: { fillColor: GRIS_OSC, textColor: 255, fontStyle: "bold", fontSize: 9.5, cellPadding: 5 } },
+        { content: "", styles: { fillColor: GRIS_OSC, cellPadding: 0 } },
+        { content: "", styles: { fillColor: GRIS_OSC, cellPadding: 0 } },
+      ]],
       margin: { left: margin, right: margin },
       tableLineWidth: 0,
+      columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2 }, 2: { cellWidth: col3 } },
     });
     return (doc as any).lastAutoTable.finalY;
   }
@@ -94,13 +95,14 @@ export function generateBalanceGeneralPDF(
   function subHead(label: string, startY: number) {
     autoTable(doc, {
       startY,
-      body: [[{
-        content: label,
-        colSpan: 3,
-        styles: { fillColor: GRIS_BG, textColor: GRIS_OSC, fontStyle: "bold", fontSize: 8.5, cellPadding: [4, 4, 4, 8] },
-      }]],
+      body: [[
+        { content: label, styles: { fillColor: GRIS_BG, textColor: GRIS_OSC, fontStyle: "bold", fontSize: 8.5, cellPadding: [4, 4, 4, 8] } },
+        { content: "", styles: { fillColor: GRIS_BG, cellPadding: 0 } },
+        { content: "", styles: { fillColor: GRIS_BG, cellPadding: 0 } },
+      ]],
       margin: { left: margin, right: margin },
       tableLineWidth: 0,
+      columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2 }, 2: { cellWidth: col3 } },
     });
     return (doc as any).lastAutoTable.finalY;
   }
@@ -173,12 +175,13 @@ export function generateBalanceGeneralPDF(
     autoTable(doc, {
       startY,
       body: [[
-        { content: label, colSpan: 2, styles: { fontStyle: "bold", fontSize, fillColor: GRIS_OSC, textColor: 255, cellPadding: [6, 4, 6, 4] } },
+        { content: "", styles: { fillColor: GRIS_OSC, cellPadding: [6, 0, 6, 0] } },
+        { content: label, styles: { fontStyle: "bold", fontSize, fillColor: GRIS_OSC, textColor: 255, cellPadding: [6, 4, 6, 4] } },
         { content: fm(total), styles: { halign: "right", fontStyle: "bold", fontSize, fillColor: GRIS_OSC, textColor: 255, cellPadding: [6, 4, 6, 4] } },
       ]],
       margin: { left: margin, right: margin },
       tableLineWidth: 0,
-      columnStyles: { 0: { cellWidth: col1 + col2 }, 1: { cellWidth: col3, halign: "right" } },
+      columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2 }, 2: { cellWidth: col3, halign: "right" } },
     });
     return (doc as any).lastAutoTable.finalY;
   }
@@ -230,20 +233,18 @@ export function generateBalanceGeneralPDF(
   const diferencia = bg.totalActivo - bg.totalPasivoCapital;
   autoTable(doc, {
     startY: y + 6,
-    body: [[{
-      content: Math.abs(diferencia) < 0.01
-        ? "Cuadre correcto (Activo = Pasivo + Capital)"
-        : `Diferencia: ${fm(diferencia)}`,
-      colSpan: 3,
-      styles: {
-        fontStyle: "bold", fontSize: 9,
-        textColor: Math.abs(diferencia) < 0.01 ? [60, 60, 70] : [140, 60, 60],
-        cellPadding: [4, 4, 4, 4],
-      },
-    }]],
+    body: [[
+      { content: Math.abs(diferencia) < 0.01
+          ? "Cuadre correcto (Activo = Pasivo + Capital)"
+          : `Diferencia: ${fm(diferencia)}`,
+        styles: { fontStyle: "bold", fontSize: 9, textColor: Math.abs(diferencia) < 0.01 ? GRIS_OSC : [140, 60, 60], cellPadding: [4, 4, 4, 8] } },
+      { content: "", styles: { cellPadding: 0 } },
+      { content: "", styles: { cellPadding: 0 } },
+    ]],
     margin: { left: margin, right: margin },
     tableLineWidth: 0,
     styles: { lineColor: GRIS_CLARO, lineWidth: 0.3 },
+    columnStyles: { 0: { cellWidth: col1 }, 1: { cellWidth: col2 }, 2: { cellWidth: col3 } },
   });
 
   // Footer
