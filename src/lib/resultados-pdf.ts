@@ -41,8 +41,8 @@ type ErData = {
 };
 
 type SplitData = {
-  helix: { nomina: number; imss: number; isn: number; honorarios: number };
-  laross: { nomina: number; imss: number; isn: number; honorarios: number };
+  helix: { nomina: number; asimilados: number; imss: number; isn: number; honorarios: number };
+  laross: { nomina: number; asimilados: number; imss: number; isn: number; honorarios: number };
 };
 
 function fm(n: number) {
@@ -498,6 +498,13 @@ export function generateResultadosPDF(
       ],
       body: [
         ["Nómina", fm(split.helix.nomina), "", fm(split.laross.nomina), ""],
+        [
+          "Honorarios Profesionales",
+          fm(split.helix.asimilados),
+          "",
+          fm(split.laross.asimilados),
+          "",
+        ],
         ["IMSS", fm(split.helix.imss), "", fm(split.laross.imss), ""],
         ["ISN 3%", fm(split.helix.isn), "", fm(split.laross.isn), ""],
         ["Honorarios", fm(split.helix.honorarios), "", fm(split.laross.honorarios), ""],

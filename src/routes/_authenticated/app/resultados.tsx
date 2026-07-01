@@ -447,6 +447,11 @@ function Resultados() {
                       <td></td>
                     </tr>
                     <HLRow label="Nómina" h={splitData.helix.nomina} l={splitData.laross.nomina} />
+                    <HLRow
+                      label="Honorarios Profesionales"
+                      h={splitData.helix.asimilados}
+                      l={splitData.laross.asimilados}
+                    />
                     <HLRow label="IMSS" h={splitData.helix.imss} l={splitData.laross.imss} />
                     <HLRow label="ISN 3%" h={splitData.helix.isn} l={splitData.laross.isn} />
                     <HLRow
