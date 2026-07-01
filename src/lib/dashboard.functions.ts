@@ -30,7 +30,13 @@ async function getSaldos(supabase: any, orgId: string, ejercicio: number, mes: n
   return map;
 }
 
-function calcER(saldos: Record<string, number>, saldosAnt: Record<string, number> | null) {
+// calcER ahora recibe naturalezaMap para aplicar el signo correctamente
+// (igual que getEstadoResultados: deudora = -saldo, acreedora = +saldo)
+function calcER(
+  saldos: Record<string, number>,
+  saldosAnt: Record<string, number> | null,
+  naturalezaMap: Record<string, string>,
+) {
   let ingresos = 0,
     costos = 0,
     gastos = 0,
@@ -38,15 +44,27 @@ function calcER(saldos: Record<string, number>, saldosAnt: Record<string, number
     otrosGast = 0;
   for (const [codigo, saldo] of Object.entries(saldos)) {
     const d = codigo.replace(/^0+/, "")[0];
-    const ant = saldosAnt?.[codigo] ?? 0;
-    const delta = saldo - ant;
-    if (d === "4") ingresos += delta;
-    else if (d === "5") costos += Math.abs(delta);
-    else if (d === "6") gastos += Math.abs(delta);
-    else if (d === "7") {
+    if (d !== "4" && d !== "5" && d !== "6" && d !== "7") continue;
+    const nat = naturalezaMap[codigo] ?? "deudora";
+    // signed: deudora = -saldo, acreedora = +saldo (igual que ER)
+    const signedSaldo = nat === "deudora" ? -saldo : saldo;
+    const signedAnt = saldosAnt
+      ? nat === "deudora"
+        ? -(saldosAnt[codigo] ?? 0)
+        : (saldosAnt[codigo] ?? 0)
+      : 0;
+    const per = signedSaldo - signedAnt; // delta con signo aplicado
+
+    if (d === "4") {
+      ingresos += per; // puede ser negativo (descuentos/contra-revenue)
+    } else if (d === "5") {
+      costos += Math.abs(per);
+    } else if (d === "6") {
+      gastos += Math.abs(per);
+    } else if (d === "7") {
       const d2 = codigo.replace(/^0+/, "").substring(0, 2);
-      if (d2 === "71" || d2 === "73") otrosIng += delta;
-      else otrosGast += Math.abs(delta);
+      if (d2 === "71" || d2 === "73") otrosIng += per;
+      else otrosGast += Math.abs(per);
     }
   }
   const utilidad = ingresos - costos - gastos + otrosIng - otrosGast;
@@ -64,25 +82,28 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
     const startMonth = `${year}-${String(month).padStart(2, "0")}-01`;
     const endMonth = new Date(year, month, 0).toISOString().slice(0, 10);
 
-    // Obtener el ID de la cuenta de sueldos (610000100000000000002)
-    const { data: acctSueldos } = await supabase
+    // Cargar cuentas con naturaleza (necesario para calcER)
+    const { data: accts } = await supabase
       .from("accounts")
-      .select("id")
-      .eq("organization_id", data.organizationId)
-      .eq("codigo", "610000100000000000002")
-      .maybeSingle();
-    const sueldosAcctId = acctSueldos?.id;
+      .select("codigo, naturaleza")
+      .eq("organization_id", data.organizationId);
+    const naturalezaMap: Record<string, string> = {};
+    (accts ?? []).forEach((a: any) => {
+      naturalezaMap[a.codigo] = a.naturaleza;
+    });
+
+    // Obtener ID de cuenta de sueldos
+    const sueldosAcctId = (accts ?? []).find((a: any) => a.codigo === "610000100000000000002")?.id;
 
     // 1. Saldos para el ER del mes seleccionado
-    // Cuando mes=1 (enero), saldosAnt=null porque los saldos de ingresos/gastos
-    // se reinician al iniciar un nuevo ejercicio en Aspel COI (igual que el ER)
+    // mes=1 (enero): saldosAnt=null (saldos se reinician al iniciar ejercicio)
     const [saldosMes, saldosAnt] = await Promise.all([
       getSaldos(supabase, data.organizationId, year, month),
       month > 1 ? getSaldos(supabase, data.organizationId, year, month - 1) : Promise.resolve(null),
     ]);
-    const er = calcER(saldosMes, saldosAnt);
+    const er = calcER(saldosMes, saldosAnt, naturalezaMap);
 
-    // 2. Conteos de pólizas y empleados (en paralelo)
+    // 2. Conteos de pólizas y empleados
     const [emp, polizas, periodos, lineasCount] = await Promise.all([
       supabase
         .from("employees")
@@ -131,13 +152,11 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
       const d = new Date(year, month - 1 - i, 1);
       const tEj = d.getFullYear();
       const tMes = d.getMonth() + 1;
-      // Cuando tMes=1 (enero), saldosAnt=null porque los saldos de
-      // ingresos/gastos se reinician al iniciar un nuevo ejercicio
       const [tSaldos, tSaldosAnt] = await Promise.all([
         getSaldos(supabase, data.organizationId, tEj, tMes),
         tMes > 1 ? getSaldos(supabase, data.organizationId, tEj, tMes - 1) : Promise.resolve(null),
       ]);
-      const tER = calcER(tSaldos, tSaldosAnt);
+      const tER = calcER(tSaldos, tSaldosAnt, naturalezaMap);
       const k = `${tEj}-${String(tMes).padStart(2, "0")}`;
       trend.push({
         mes: k,
