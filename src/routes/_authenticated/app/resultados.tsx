@@ -234,8 +234,8 @@ function Resultados() {
                     </td>
                   </tr>
                 ))}
-                {/* Ingreso por cliente (informativo, no suma al total) */}
-                {er.ingresosClientePer > 0 && (
+                {/* Ingreso por cliente (informativo, no suma al total) — solo con toggle HELIX-LAROSS */}
+                {splitOn && er.ingresosClientePer > 0 && (
                   <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>
                     <td className="px-3 pl-6 font-mono text-xs" style={{ color: "#15803d" }}>
                       1150-003 — INGRESOS OFIC. IMPORTACIONES (info)
