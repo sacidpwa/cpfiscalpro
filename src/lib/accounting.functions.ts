@@ -596,7 +596,6 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
 
     // Cuentas para el split (todas desde account_balances)
     const nominaAccts = ["610000100000000000002"]; // Sueldos y Salarios (sin asimilados)
-    const isrAccts = ["215000100000000000002", "215000200000000000002"]; // ISR retenido sueldos + asimilados
     const imssAccts = ["610001700000000000002"]; // Cuota IMSS (gasto patronal)
     const isnAccts = ["610002000000000000002"]; // Impuesto sobre nómina
     const honorariosAccts = [
@@ -620,20 +619,13 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
     }
 
     // Calcular delta del periodo (hastaMes - desdeMes+1, o hastaMes si desdeMes=1)
-    const hasta = await getBalSum(
-      [...nominaAccts, ...isrAccts, ...imssAccts, ...isnAccts, ...honorariosAccts],
-      data.hastaMes,
-    );
-    // Para el "anterior": si desdeMes=1, anterior = 0 (inicio de ejercicio)
     const antNomina = data.desdeMes > 1 ? await getBalSum(nominaAccts, data.desdeMes - 1) : 0;
-    const antIsr = data.desdeMes > 1 ? await getBalSum(isrAccts, data.desdeMes - 1) : 0;
     const antImss = data.desdeMes > 1 ? await getBalSum(imssAccts, data.desdeMes - 1) : 0;
     const antIsn = data.desdeMes > 1 ? await getBalSum(isnAccts, data.desdeMes - 1) : 0;
     const antHonorarios =
       data.desdeMes > 1 ? await getBalSum(honorariosAccts, data.desdeMes - 1) : 0;
 
     const nominaPer = (await getBalSum(nominaAccts, data.hastaMes)) - antNomina;
-    const isrPer = (await getBalSum(isrAccts, data.hastaMes)) - antIsr;
     const imssPer = (await getBalSum(imssAccts, data.hastaMes)) - antImss;
     const isnPer = (await getBalSum(isnAccts, data.hastaMes)) - antIsn;
     const honorariosPer = (await getBalSum(honorariosAccts, data.hastaMes)) - antHonorarios;
@@ -641,14 +633,12 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
     return {
       helix: {
         nomina: nominaPer * hRatio,
-        isr: Math.abs(isrPer) * hRatio,
         imss: imssPer * hRatio,
         isn: isnPer * hRatio,
         honorarios: honorariosPer * hRatio,
       },
       laross: {
         nomina: nominaPer * lRatio,
-        isr: Math.abs(isrPer) * lRatio,
         imss: imssPer * lRatio,
         isn: isnPer * lRatio,
         honorarios: honorariosPer * lRatio,
