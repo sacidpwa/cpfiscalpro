@@ -575,12 +575,14 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
 
-    // Employee count by empresa (for proportional split)
+    // Employee count by empresa (filtrado por el periodo: fecha_alta <= fin, sin baja o baja después)
+    const periodoFin = new Date(data.ejercicio, data.hastaMes, 0).toISOString().slice(0, 10);
     const { data: empCount } = await admin
       .from("employees")
       .select("empresa")
       .eq("organization_id", data.organizationId)
-      .eq("estatus", "activo");
+      .eq("estatus", "activo")
+      .lte("fecha_alta", periodoFin);
     let hCount = 0,
       lCount = 0;
     for (const e of empCount ?? []) {
