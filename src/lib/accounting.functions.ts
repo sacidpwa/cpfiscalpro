@@ -1095,3 +1095,223 @@ export const exportAllData = createServerFn({ method: "POST" })
       counts: Object.fromEntries(Object.entries(result).map(([k, v]) => [k, v.length])),
     };
   });
+
+// ============ ESTADO DE FLUJO DE EFECTIVO ============
+export const getFlujoEfectivo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        ejercicio: z.number(),
+        desdeMes: z.number(),
+        hastaMes: z.number(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    // Cargar cuentas
+    const { data: accts } = await supabase
+      .from("accounts")
+      .select("id, codigo, nombre, naturaleza, acumulativa, activa")
+      .eq("organization_id", data.organizationId)
+      .eq("activa", true)
+      .order("codigo");
+    const acctMap: Record<string, any> = {};
+    (accts ?? []).forEach((a: any) => (acctMap[a.codigo] = a));
+
+    // Saldos de bancos e inversiones (activo circulante) al inicio y fin del periodo
+    async function getSaldosByPrefix(prefixes: string[], ejercicio: number, mes: number) {
+      let queryPer = mes;
+      if (mes === 13) {
+        const { count } = await supabase
+          .from("account_balances")
+          .select("*", { count: "exact", head: true })
+          .eq("organization_id", data.organizationId)
+          .eq("ejercicio", ejercicio)
+          .eq("periodo", 13);
+        if (count === 0) queryPer = 12;
+      }
+      const { data: bals } = await supabase
+        .from("account_balances")
+        .select("account_codigo, saldo_final")
+        .eq("organization_id", data.organizationId)
+        .eq("ejercicio", ejercicio)
+        .eq("periodo", queryPer);
+      const map: Record<string, number> = {};
+      for (const b of bals ?? []) map[b.account_codigo] = Number(b.saldo_final ?? 0);
+      return map;
+    }
+
+    function readAccount(map: Record<string, number>, codigo: string): number {
+      // Buscar cuenta hoja (no acumulativa) con ese código exacto
+      const a = acctMap[codigo];
+      if (a && !a.acumulativa) return map[codigo] ?? 0;
+      // Buscar todas las hojas hijas que empiezan con ese prefijo
+      let total = 0;
+      for (const [cod, val] of Object.entries(map)) {
+        if (cod.startsWith(codigo) && acctMap[cod] && !acctMap[cod].acumulativa) {
+          total += val;
+        }
+      }
+      return total;
+    }
+
+    // Saldos de efectivo (bancos + caja) al inicio y fin
+    const efectivoAccts = (accts ?? []).filter(
+      (a: any) =>
+        /^(11[12])/.test(a.codigo) &&
+        !a.acumulativa &&
+        a.codigo !== "111000000000000000001" &&
+        a.codigo !== "112000000000000000001",
+    );
+    const efectivoCodes = efectivoAccts.map((a: any) => a.codigo);
+
+    // Inicio del periodo: mes anterior al desdeMes
+    const saldoInicioMes = data.desdeMes > 1 ? data.desdeMes - 1 : 12;
+    const saldoInicioEj = data.desdeMes > 1 ? data.ejercicio : data.ejercicio - 1;
+
+    const [saldosFin, saldosInicio] = await Promise.all([
+      getSaldosByPrefix(efectivoCodes, data.ejercicio, data.hastaMes),
+      getSaldosByPrefix(efectivoCodes, saldoInicioEj, saldoInicioMes),
+    ]);
+
+    let efectivoInicio = 0;
+    let efectivoFin = 0;
+    for (const cod of efectivoCodes) {
+      efectivoInicio += saldosInicio[cod] ?? 0;
+      efectivoFin += saldosFin[cod] ?? 0;
+    }
+
+    // Saldos de las cuentas operativas al inicio y fin (para deltas)
+    const allSaldosFin = await getSaldosByPrefix([], data.ejercicio, data.hastaMes);
+    const allSaldosInicio = await getSaldosByPrefix([], saldoInicioEj, saldoInicioMes);
+
+    // Calcular deltas por cuenta
+    function delta(codigo: string): number {
+      const inicio = allSaldosInicio[codigo] ?? 0;
+      const fin = allSaldosFin[codigo] ?? 0;
+      const a = acctMap[codigo];
+      if (!a) return 0;
+      // signed delta: deudora = -(fin-inicio), acreedora = +(fin-inicio)
+      const d = fin - inicio;
+      return a.naturaleza === "deudora" ? -d : d;
+    }
+
+    function sumByPrefix(prefix: string, saltarAcumulativas = true): number {
+      let total = 0;
+      for (const cod of Object.keys(allSaldosFin)) {
+        if (!cod.startsWith(prefix)) continue;
+        const a = acctMap[cod];
+        if (!a) continue;
+        if (saltarAcumulativas && a.acumulativa) continue;
+        total += delta(cod);
+      }
+      return total;
+    }
+
+    // ====== OPERACIÓN ======
+    // Utilidad neta del periodo (ingresos - costos - gastos + otros)
+    const utilidadNeta =
+      sumByPrefix("4") -
+      Math.abs(sumByPrefix("5")) -
+      Math.abs(sumByPrefix("6")) +
+      sumByPrefix("71") +
+      sumByPrefix("73") -
+      Math.abs(sumByPrefix("72")) -
+      Math.abs(sumByPrefix("74"));
+
+    // Depreciación y amortización (se suma de vuelta porque no es efectivo)
+    const depreciacion = Math.abs(sumByPrefix("63"));
+    const amortizacion = Math.abs(sumByPrefix("64"));
+
+    // Cambios en capital de trabajo
+    const deltaCuentasPorCobrar = sumByPrefix("115", false);
+    const deltaIvaAcreditable = sumByPrefix("120", false);
+    const deltaPagosAnticipados = sumByPrefix("121", false);
+    const deltaAnticiposProveedores = sumByPrefix("1215", false);
+
+    const deltaCuentasPorPagar = sumByPrefix("211", false);
+    const deltaIvaPorTrasladar = sumByPrefix("213", false);
+    const deltaIsrPorPagar = sumByPrefix("214", false);
+    const deltaRetenciones = sumByPrefix("215", false);
+    const deltaNominaPorPagar = sumByPrefix("216", false);
+    const deltaImpuestosPorPagar = sumByPrefix("217", false);
+    const deltaOtroPasivo = sumByPrefix("218", false) + sumByPrefix("219", false);
+    const deltaCreditosDiferidos = sumByPrefix("220", false);
+
+    const flujoOperacion =
+      utilidadNeta +
+      depreciacion +
+      amortizacion +
+      deltaCuentasPorCobrar +
+      deltaIvaAcreditable +
+      deltaPagosAnticipados +
+      deltaAnticiposProveedores +
+      deltaCuentasPorPagar +
+      deltaIvaPorTrasladar +
+      deltaIsrPorPagar +
+      deltaRetenciones +
+      deltaNominaPorPagar +
+      deltaImpuestosPorPagar +
+      deltaOtroPasivo +
+      deltaCreditosDiferidos;
+
+    // ====== INVERSIÓN ======
+    const deltaActivoFijo = sumByPrefix("13", false);
+    const deltaInversiones = sumByPrefix("114", false);
+    const deltaDeudoresDiversos = sumByPrefix("117", false);
+    const deltaDocumentosCobrar = sumByPrefix("116", false);
+    const flujoInversion =
+      deltaActivoFijo + deltaInversiones + deltaDeudoresDiversos + deltaDocumentosCobrar;
+
+    // ====== FINANCIAMIENTO ======
+    const deltaPrestamosBancarios = sumByPrefix("218", false);
+    const deltaCapital = sumByPrefix("3", false);
+    const flujoFinanciamiento = deltaPrestamosBancarios + deltaCapital;
+
+    // ====== RESULTADO ======
+    const flujoNeto = flujoOperacion + flujoInversion + flujoFinanciamiento;
+    const efectivoCalculado = efectivoInicio + flujoNeto;
+    const diferencia = efectivoFin - efectivoCalculado;
+
+    return {
+      efectivoInicio,
+      efectivoFin,
+      operacion: {
+        utilidadNeta,
+        depreciacion,
+        amortizacion,
+        deltaCuentasPorCobrar,
+        deltaIvaAcreditable,
+        deltaPagosAnticipados,
+        deltaAnticiposProveedores,
+        deltaCuentasPorPagar,
+        deltaIvaPorTrasladar,
+        deltaIsrPorPagar,
+        deltaRetenciones,
+        deltaNominaPorPagar,
+        deltaImpuestosPorPagar,
+        deltaOtroPasivo,
+        deltaCreditosDiferidos,
+        total: flujoOperacion,
+      },
+      inversion: {
+        deltaActivoFijo,
+        deltaInversiones,
+        deltaDeudoresDiversos,
+        deltaDocumentosCobrar,
+        total: flujoInversion,
+      },
+      financiamiento: {
+        deltaPrestamosBancarios,
+        deltaCapital,
+        total: flujoFinanciamiento,
+      },
+      flujoNeto,
+      efectivoCalculado,
+      diferencia,
+    };
+  });
