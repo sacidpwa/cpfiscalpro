@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "patch-package nf3 --no-dedup && vite build",
-    "postinstall": "patch-package",
+    "build": "node patches/fix-nf3-import.mjs && vite build",
+    "postinstall": "node patches/fix-nf3-import.mjs && patch-package",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
