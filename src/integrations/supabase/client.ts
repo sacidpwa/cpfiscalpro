@@ -2,21 +2,26 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+function getSupabaseConfig(): { url: string; anonKey: string } {
+  // On the client, use config injected during SSR from __root.tsx
+  if (typeof window !== 'undefined' && (window as any).__SUPABASE_CONFIG__) {
+    return (window as any).__SUPABASE_CONFIG__;
   }
+  // On the server, read from process.env
+  const url = process.env.SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !anonKey) {
+    const missing = [
+      ...(!url ? ['SUPABASE_URL'] : []),
+      ...(!anonKey ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
+    ];
+    throw new Error(`Missing Supabase environment variable(s): ${missing.join(', ')}.`);
+  }
+  return { url, anonKey };
+}
+
+function createSupabaseClient() {
+  const { url: SUPABASE_URL, anonKey: SUPABASE_PUBLISHABLE_KEY } = getSupabaseConfig();
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {

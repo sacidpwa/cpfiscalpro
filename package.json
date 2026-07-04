@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "patch-package nf3 --no-dedup && vite build",
     "postinstall": "patch-package",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",

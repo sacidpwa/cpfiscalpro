@@ -1,0 +1,5 @@
+[build]
+  command = "patch-package nf3 --no-dedup && vite build"
+
+[build.environment]
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "https://getahygdgotitqnpmppi.supabase.co,eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdldGFoeWdkZ290aXRxbnBtcHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjA2NzIsImV4cCI6MjA5ODMzNjY3Mn0.iQi8nJfS90kHGcm_qk_QDsKUaid_trA9upmPtAZlh-g"
