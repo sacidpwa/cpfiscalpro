@@ -77,7 +77,7 @@ function Nomina() {
     const t = toast.loading("Calculando nómina…");
     try {
       const res = await run({ data: { organizationId: org.id, periodId: p.id, incluirImss } });
-      toast.success(`${res.calculados} recibos · Total neto ${fmtMoney(res.totalNeto)}`, { id: t });
+      toast.success(`${res.calculados} recibos${res.saltados ? ` · ${res.saltados} saltados` : ""} · Total neto ${fmtMoney(res.totalNeto)}`, { id: t });
       qc.invalidateQueries({ queryKey: ["periods", org.id] });
       qc.invalidateQueries({ queryKey: ["receipts", p.id] });
       qc.invalidateQueries({ queryKey: ["stamps", p.id] });

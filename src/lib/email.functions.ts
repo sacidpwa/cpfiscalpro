@@ -2,11 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+const RESEND_API = "https://api.resend.com";
 
 // Configuración por organización (RFC/razón social → defaults)
 const ORG_EMAIL_DEFAULTS: Record<string, { fromEmail: string; summaryTo: string[]; summaryCc: string[]; signature: string; logoUrl: string }> = {
-  "HELIX PROTEINAS": {
+  "HELIX PROTEINAS SA DE CV": {
     fromEmail: "helixgestion@sacid.site",
     summaryTo: ["labra_laross@hotmail.com"],
     summaryCc: ["helixproteinas@gmail.com"],
@@ -27,9 +27,7 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
     if (!RESEND_API_KEY) throw new Error("Conecta Resend para enviar correos");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -122,13 +120,9 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
             <p style="margin-top:24px;font-size:13px;color:#555">Saludos,<br/>${orgName}</p>
           </div>`;
 
-        const res = await fetch(`${GATEWAY_URL}/emails`, {
+        const res = await fetch(`${RESEND_API}/emails`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-            "X-Connection-Api-Key": RESEND_API_KEY,
-          },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
           body: JSON.stringify({ from: fromHeader, to: [empEmail], subject, html, attachments }),
         });
 
@@ -226,13 +220,9 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
             </p>
           </div>`;
 
-        const res = await fetch(`${GATEWAY_URL}/emails`, {
+        const res = await fetch(`${RESEND_API}/emails`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-            "X-Connection-Api-Key": RESEND_API_KEY,
-          },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
           body: JSON.stringify({
             from: fromHeader,
             to: defaults.summaryTo,
@@ -311,9 +301,7 @@ export const emailStampedComplement = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
     if (!RESEND_API_KEY) throw new Error("Conecta Resend para enviar correos");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -370,13 +358,9 @@ export const emailStampedComplement = createServerFn({ method: "POST" })
     const body: any = { from: fromHeader, to: data.to, subject, html, attachments };
     if (data.cc && data.cc.length) body.cc = data.cc;
 
-    const res = await fetch(`${GATEWAY_URL}/emails`, {
+    const res = await fetch(`${RESEND_API}/emails`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": RESEND_API_KEY,
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -399,9 +383,7 @@ export const emailStampedBatch = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
     if (!RESEND_API_KEY) throw new Error("Conecta Resend para enviar correos");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -494,13 +476,9 @@ export const emailStampedBatch = createServerFn({ method: "POST" })
     const body: any = { from: fromHeader, to: data.to, subject, html, attachments };
     if (data.cc && data.cc.length) body.cc = data.cc;
 
-    const res = await fetch(`${GATEWAY_URL}/emails`, {
+    const res = await fetch(`${RESEND_API}/emails`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": RESEND_API_KEY,
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -520,9 +498,7 @@ export const emailSinglePayrollReceipt = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
     if (!RESEND_API_KEY) throw new Error("Conecta Resend para enviar correos");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -592,13 +568,9 @@ export const emailSinglePayrollReceipt = createServerFn({ method: "POST" })
         <p style="margin-top:24px;font-size:13px;color:#555">Saludos,<br/>${orgName}</p>
       </div>`;
 
-    const res = await fetch(`${GATEWAY_URL}/emails`, {
+    const res = await fetch(`${RESEND_API}/emails`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": RESEND_API_KEY,
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({ from: fromHeader, to: [to], subject, html, attachments }),
     });
     if (!res.ok) {
