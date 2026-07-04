@@ -1,2 +1,3 @@
 [build.environment]
-  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "https://getahygdgotitqnpmppi.supabase.co,eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdldGFoeWdkZ290aXRxbnBtcHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjA2NzIsImV4cCI6MjA5ODMzNjY3Mn0.iQi8nJfS90kHGcm_qk_QDsKUaid_trA9upmPtAZlh-g"
+  SECRETS_SCAN_OMIT_PATHS = ".netlify/functions-internal/**,node_modules/**,dist/**/*.map"
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,VITE_SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,VITE_SUPABASE_PUBLISHABLE_KEY"
