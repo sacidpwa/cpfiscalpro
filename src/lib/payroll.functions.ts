@@ -313,12 +313,13 @@ export const runPayroll = createServerFn({ method: "POST" })
 
       const extraDed: { importe: number }[] = [];
       if (infonavit > 0) extraDed.push({ importe: infonavit });
+      if (importeFalta > 0) extraDed.push({ importe: importeFalta });
 
       const result = calcPayroll(
         {
           salarioDiario: Number(emp.salario_diario),
           sdi: Number(emp.sdi),
-          diasPagados,
+          diasPagados: period.dias,
           periodicidad: period.periodicidad as Periodicity,
           deduccionesExtra: extraDed.length ? extraDed : undefined,
         },
@@ -340,7 +341,7 @@ export const runPayroll = createServerFn({ method: "POST" })
           organization_id: data.organizationId,
           payroll_period_id: period.id,
           employee_id: emp.id,
-          dias_pagados: diasPagados,
+          dias_pagados: period.dias,
           sueldo_diario: emp.salario_diario,
           sdi: emp.sdi,
           total_percepciones: result.total_percepciones,
@@ -360,7 +361,7 @@ export const runPayroll = createServerFn({ method: "POST" })
       if (re) throw new Error(re.message);
 
       const lines: Array<{ concepto_clave: string; descripcion: string; tipo: "percepcion" | "deduccion"; importe_gravado: number; importe_exento: number }> = [
-        { concepto_clave: "001", descripcion: `Sueldo (${diasPagados} días)`, tipo: "percepcion", importe_gravado: result.total_gravado, importe_exento: 0 },
+        { concepto_clave: "001", descripcion: `Sueldo (${period.dias} días)`, tipo: "percepcion", importe_gravado: result.total_gravado, importe_exento: 0 },
         { concepto_clave: "002", descripcion: "ISR", tipo: "deduccion", importe_gravado: result.isr, importe_exento: 0 },
       ];
       if (data.incluirImss && result.imss_obrero > 0) {
@@ -368,9 +369,8 @@ export const runPayroll = createServerFn({ method: "POST" })
       }
 
       if (faltas > 0) {
-        // Línea informativa: el descuento ya está reflejado al pagar menos días (incluye proporción del 7°).
         const desc = `Faltas: ${faltas} día${faltas === 1 ? "" : "s"} · ${diasDescontados} día(s) desc.`;
-        lines.push({ concepto_clave: "006", descripcion: desc, tipo: "deduccion", importe_gravado: 0, importe_exento: 0 });
+        lines.push({ concepto_clave: "020", descripcion: desc, tipo: "deduccion", importe_gravado: importeFalta, importe_exento: 0 });
       }
       if (infonavit > 0) {
         // SAT c_TipoDeduccion 010 = Préstamos provenientes del Fondo Nacional para la Vivienda (Crédito INFONAVIT)
@@ -471,15 +471,17 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
       const divisor: Record<Periodicity, number> = { semanal: 4, catorcenal: 2, quincenal: 2, mensual: 1 };
       infonavit = Math.round((cuotaMensualInf / divisor[period.periodicidad as Periodicity]) * 100) / 100;
     }
-    const extraDed = infonavit > 0 ? [{ importe: infonavit }] : undefined;
+    const extraDed: { importe: number }[] = [];
+    if (infonavit > 0) extraDed.push({ importe: infonavit });
+    if (importeFalta > 0) extraDed.push({ importe: importeFalta });
 
     const result = calcPayroll(
       {
         salarioDiario: Number(emp.salario_diario),
         sdi: Number(emp.sdi),
-        diasPagados,
+        diasPagados: period.dias,
         periodicidad: period.periodicidad as Periodicity,
-        deduccionesExtra: extraDed,
+        deduccionesExtra: extraDed.length ? extraDed : undefined,
       },
       tables,
     );
@@ -497,7 +499,7 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
     if (delLinesErr) throw new Error(delLinesErr.message);
 
     const { error: upErr } = await supabase.from("payroll_receipts").update({
-      dias_pagados: diasPagados,
+      dias_pagados: period.dias,
       sueldo_diario: emp.salario_diario,
       sdi: emp.sdi,
       total_percepciones: result.total_percepciones,
@@ -515,7 +517,7 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
     if (upErr) throw new Error(upErr.message);
 
     const lines: Array<{ concepto_clave: string; descripcion: string; tipo: "percepcion" | "deduccion"; importe_gravado: number; importe_exento: number }> = [
-      { concepto_clave: "001", descripcion: `Sueldo (${diasPagados} días)`, tipo: "percepcion", importe_gravado: result.total_gravado, importe_exento: 0 },
+      { concepto_clave: "001", descripcion: `Sueldo (${period.dias} días)`, tipo: "percepcion", importe_gravado: result.total_gravado, importe_exento: 0 },
       { concepto_clave: "002", descripcion: "ISR", tipo: "deduccion", importe_gravado: result.isr, importe_exento: 0 },
     ];
     if (data.incluirImss && result.imss_obrero > 0) {
@@ -523,7 +525,7 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
     }
     if (faltas > 0) {
       const desc = `Faltas: ${faltas} día${faltas === 1 ? "" : "s"} · ${diasDescontados} día(s) desc.`;
-      lines.push({ concepto_clave: "006", descripcion: desc, tipo: "deduccion", importe_gravado: 0, importe_exento: 0 });
+      lines.push({ concepto_clave: "020", descripcion: desc, tipo: "deduccion", importe_gravado: importeFalta, importe_exento: 0 });
     }
     if (infonavit > 0) {
       lines.push({ concepto_clave: "010", descripcion: "Crédito INFONAVIT", tipo: "deduccion", importe_gravado: infonavit, importe_exento: 0 });
