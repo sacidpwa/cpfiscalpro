@@ -18,7 +18,7 @@ import {
 } from "@/lib/facturapi-admin.functions";
 import { PageHeader } from "@/components/app-ui";
 import {
-  Building2, KeyRound, Plus, RefreshCw, Trash2, Eye, Copy, Save, X, Loader2, Link2, ShieldCheck, Upload, ExternalLink,
+  Building2, KeyRound, Plus, RefreshCw, Trash2, Eye, Copy, Save, X, Loader2, Link2, ShieldCheck, Upload, ExternalLink, Check,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/facturapi")({
