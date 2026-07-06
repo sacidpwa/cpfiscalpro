@@ -108,6 +108,8 @@ function FacturapiAdmin() {
               <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
               </div>
+            ) : orgsQ.error ? (
+              <div className="p-4 text-sm text-destructive">Error: {(orgsQ.error as Error).message}</div>
             ) : orgs.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground">No hay organizaciones.</div>
             ) : (

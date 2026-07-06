@@ -39,9 +39,10 @@ export const Route = createFileRoute("/_authenticated/app/")({
 function Dashboard() {
   const org = useRequireOrg();
   const fn = useServerFn(getDashboardKpis);
-  const now = new Date();
-  const [ejercicio, setEjercicio] = useState(now.getFullYear());
-  const [mes, setMes] = useState(now.getMonth() + 1);
+  const hoy = new Date();
+  const mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  const [ejercicio, setEjercicio] = useState(mesPasado.getFullYear());
+  const [mes, setMes] = useState(mesPasado.getMonth() + 1);
   const { data, isLoading } = useQuery({
     queryKey: ["kpis", org.id, ejercicio, mes],
     queryFn: () => fn({ data: { organizationId: org.id, mes, ejercicio } }),
