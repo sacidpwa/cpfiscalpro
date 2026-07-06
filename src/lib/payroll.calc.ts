@@ -151,7 +151,9 @@ export function calcPayroll(input: PayrollInput, ctx: PayrollContext): PayrollRe
   const isr = round2(Math.max(0, isrBruto - sub));
   const subsidioPagado = round2(Math.max(0, sub - isrBruto));
 
-  const imss = calcImssObrero(input.sdi, days, ctx.umaDiaria);
+  const imss = esSalarioMinimo
+    ? { efm_dinero: 0, efm_especie_adicional: 0, invalidez_vida: 0, cesantia_vejez: 0, total: 0 }
+    : calcImssObrero(input.sdi, days, ctx.umaDiaria);
 
   const deduccionesTotal = round2(isr + imss.total + dedExtra.reduce((s, d) => s + d.importe, 0));
 
