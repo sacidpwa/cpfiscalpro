@@ -15,6 +15,8 @@ import {
   fapiListLocalOrgs,
   fapiListLocalUnlinked,
   fapiUploadCertificate,
+  fapiGetLocalBilling,
+  fapiSetEnvironment,
 } from "@/lib/facturapi-admin.functions";
 import { PageHeader } from "@/components/app-ui";
 import {
@@ -337,6 +339,22 @@ function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const billingFn = useServerFn(fapiGetLocalBilling);
+  const setEnvFn = useServerFn(fapiSetEnvironment);
+  const billingQ = useQuery({
+    queryKey: ["fapi-billing", id],
+    queryFn: () => billingFn({ data: { facturapi_org_id: id } }),
+  });
+  const currentEnv = billingQ.data?.environment ?? "test";
+  const setEnvMut = useMutation({
+    mutationFn: (env: "test" | "live") => setEnvFn({ data: { facturapi_org_id: id, environment: env } }),
+    onSuccess: () => {
+      toast.success("Modo cambiado");
+      billingQ.refetch();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const delMut = useMutation({
     mutationFn: () => deleteFn({ data: { id } }),
     onSuccess: () => { toast.success("Organización eliminada"); onDeleted(); },
@@ -366,6 +384,22 @@ function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
             <div className="mt-0.5 text-xs text-muted-foreground">{legal0.tax_id ?? "Sin RFC asignado"}</div>
           </div>
           <div className="flex shrink-0 gap-2">
+            <div className="flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs">
+              <span className="text-muted-foreground">Modo:</span>
+              <button
+                onClick={() => {
+                  if (currentEnv === "live" && !confirm("¿Cambiar a modo test? Las facturas se timbrarán en ambiente de pruebas.")) return;
+                  setEnvMut.mutate(currentEnv === "test" ? "live" : "test");
+                }}
+                disabled={setEnvMut.isPending}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${currentEnv === "live" ? "bg-amber-500" : "bg-muted-foreground/30"}`}
+              >
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${currentEnv === "live" ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+              </button>
+              <span className={`font-semibold ${currentEnv === "live" ? "text-amber-700" : "text-muted-foreground"}`}>
+                {currentEnv === "live" ? "Live" : "Test"}
+              </span>
+            </div>
             <button
               onClick={() => { if (confirm("¿Eliminar esta organización de FacturAPI? Esta acción es definitiva.")) delMut.mutate(); }}
               disabled={delMut.isPending}

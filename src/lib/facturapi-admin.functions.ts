@@ -221,6 +221,44 @@ export const fapiSaveKeyToOrg = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---------- GET / SET ENVIRONMENT ----------
+export const fapiGetLocalBilling = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ facturapi_org_id: z.string().min(1) }).parse(i))
+  .handler(async ({ data, context }) => {
+    await assertPlatformAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("org_billing_config")
+      .select("organization_id, environment, facturapi_test_key, facturapi_live_key")
+      .eq("facturapi_org_id", data.facturapi_org_id)
+      .maybeSingle();
+    if (!row) return { exists: false, environment: "test" };
+    return {
+      exists: true,
+      organization_id: row.organization_id,
+      environment: row.environment as "test" | "live",
+      testKeySet: !!row.facturapi_test_key,
+      liveKeySet: !!row.facturapi_live_key,
+    };
+  });
+
+export const fapiSetEnvironment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ facturapi_org_id: z.string().min(1), environment: z.enum(["test", "live"]) }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertPlatformAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("org_billing_config")
+      .update({ environment: data.environment, updated_by: context.userId })
+      .eq("facturapi_org_id", data.facturapi_org_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 // ---------- LIST LOCAL ORGS (for linking) ----------
 export const fapiListLocalOrgs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
