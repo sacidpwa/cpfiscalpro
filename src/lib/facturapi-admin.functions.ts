@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -12,7 +11,11 @@ async function assertPlatformAdmin(supabase: any, userId: string) {
 }
 
 function userKey(): string {
-  const k = process.env.FACTURAPI_USER_KEY;
+  let k = process.env.FACTURAPI_USER_KEY;
+  if (!k) {
+    try { require("dotenv").config(); } catch {}
+    k = process.env.FACTURAPI_USER_KEY!;
+  }
   if (!k) throw new Error("Falta FACTURAPI_USER_KEY. Agrégalo en los secretos del backend.");
   return k;
 }
