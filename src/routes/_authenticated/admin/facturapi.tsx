@@ -227,14 +227,18 @@ function LocalOrgDetail({ org, onCreate }: { org: any; onCreate: (fapiId: string
     try {
       const fapiOrg: any = await create({ data: { name: org.nombre_comercial || org.razon_social } });
       if (org.rfc) {
-        const legal: any = {
-          legal_name: org.razon_social,
-          tax_id: org.rfc,
-          name: org.nombre_comercial || org.razon_social,
-        };
-        if (org.regimen_fiscal) legal.tax_system = org.regimen_fiscal;
-        if (org.codigo_postal) legal.address = { zip: org.codigo_postal };
-        await updateLegal({ data: { id: fapiOrg.id, legal } });
+        await updateLegal({
+          data: {
+            id: fapiOrg.id,
+            legal: {
+              name: org.nombre_comercial || org.razon_social,
+              legal_name: org.razon_social,
+              tax_id: org.rfc,
+              tax_system: org.regimen_fiscal || "601",
+              address: { zip: org.codigo_postal || "00000" },
+            },
+          },
+        });
       }
       toast.success(`Organización creada en FacturAPI: ${fapiOrg.id}`);
       qc.invalidateQueries({ queryKey: ["fapi-orgs"] });
