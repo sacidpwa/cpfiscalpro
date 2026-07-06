@@ -291,9 +291,11 @@ export const runPayroll = createServerFn({ method: "POST" })
 
     for (const emp of emps ?? []) {
       // Días efectivamente trabajados (sin incidencia no pagada)
-      const trabajados = trabajadosPorEmp.get(emp.id) ?? 0;
       const faltas = faltasPorEmp.get(emp.id) ?? 0;
       const otrosDias = otrosDiasPorEmp.get(emp.id) ?? 0;
+      // Si el empleado no tiene ningún registro de asistencia, asumir que trabajó todos los días
+      const tieneAsistencia = (asist ?? []).some((a: any) => a.employee_id === emp.id);
+      const trabajados = tieneAsistencia ? (trabajadosPorEmp.get(emp.id) ?? 0) : period.dias;
       // Si no trabajó ningún día (p.ej. incapacidad toda la semana), no hay salario ni descanso
       if (trabajados === 0) {
         results.push({ empleado: emp.nombre, neto: 0, saltado: true });
