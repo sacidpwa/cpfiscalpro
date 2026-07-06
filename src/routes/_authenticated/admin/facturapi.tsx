@@ -202,19 +202,6 @@ function FacturapiAdmin() {
   );
 }
 
-function StepHeader({ num, label, done, current }: { num: number; label: string; done: boolean; current: boolean }) {
-  return (
-    <div className={`flex items-center gap-2 px-4 py-3 ${current ? "bg-primary/5 font-semibold text-primary" : done ? "text-emerald-700" : "text-muted-foreground"}`}>
-      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-        done ? "bg-emerald-500 text-white" : current ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-      }`}>
-        {done ? <Check className="h-3 w-3" /> : num}
-      </span>
-      <span className="truncate">{label}</span>
-    </div>
-  );
-}
-
 function ReadyBadge({ ok, label }: { ok: boolean | undefined | null; label: string }) {
   return (
     <span
@@ -390,52 +377,79 @@ function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
         </div>
       </div>
 
-      {/* Step progress */}
-      <div className="overflow-hidden rounded-lg border bg-card">
-        <div className="grid grid-cols-3 divide-x text-center text-xs">
-          <StepHeader num={1} label="CSD" done={hasCert} current={!hasCert} />
-          <StepHeader num={2} label="Manifiesto" done={manifiestoDone} current={hasCert && !manifiestoDone} />
-          <StepHeader num={3} label="Llaves (test → live)" done={false} current={hasCert && manifiestoDone} />
-        </div>
-      </div>
-
       {/* Step 1 — CSD */}
-      <CertificateCard orgId={id} />
+      <details className="rounded-lg border bg-card" open={!hasCert}>
+        <summary className="flex cursor-pointer items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${hasCert ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground"}`}>
+              {hasCert ? <Check className="h-3 w-3" /> : 1}
+            </span>
+            CSD
+            {hasCert && <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">Completado</span>}
+          </div>
+          <span className="text-[10px] text-muted-foreground">{hasCert ? "Expandir" : "Pendiente"}</span>
+        </summary>
+        <div className="border-t px-5 py-4">
+          <CertificateCard orgId={id} />
+        </div>
+      </details>
 
       {/* Step 2 — Manifiesto */}
-      <div className="rounded-lg border bg-card p-5">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className={`h-4 w-4 ${manifiestoDone ? "text-emerald-600" : "text-muted-foreground"}`} />
-          <h3 className="text-sm font-semibold">Firmar Carta Manifiesto</h3>
-          {manifiestoDone && <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">Completado</span>}
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {manifiestoDone
-            ? "La carta manifiesto ya fue firmada. La organización está lista para producción."
-            : hasCert
-              ? "Una vez cargado el CSD, ingresa al dashboard de FacturAPI para firmar la carta manifiesto."
-              : "Primero carga el CSD en el paso anterior."}
-        </p>
-        <div className="mt-3 flex gap-2">
-          <a
-            href="https://dashboard.facturapi.io/settings/manifiesto"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium ${hasCert && !manifiestoDone ? "border-primary/40 text-primary hover:bg-primary/10" : "pointer-events-none opacity-40"}`}
-          >
-            <ExternalLink className="h-3.5 w-3.5" /> Ir a firmar manifiesto
-          </a>
-        </div>
-      </div>
+      <details className="rounded-lg border bg-card" open={hasCert && !manifiestoDone}>
+        <summary className="flex cursor-pointer items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${manifiestoDone ? "bg-emerald-500 text-white" : hasCert ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+              {manifiestoDone ? <Check className="h-3 w-3" /> : 2}
+            </span>
+            Manifiesto
+            {manifiestoDone && <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">Completado</span>}
+          </div>
+          <span className="text-[10px] text-muted-foreground">{manifiestoDone ? "Expandir" : hasCert ? "Pendiente" : "Bloqueado"}</span>
+        </summary>
+        {!manifiestoDone && (
+          <div className="border-t px-5 py-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold">Firmar Carta Manifiesto</h3>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {hasCert
+                ? "Ingresa al dashboard de FacturAPI para firmar la carta manifiesto."
+                : "Primero carga el CSD en el paso anterior."}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <a
+                href="https://dashboard.facturapi.io/settings/manifiesto"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium ${hasCert ? "border-primary/40 text-primary hover:bg-primary/10" : "pointer-events-none opacity-40"}`}
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Ir a firmar manifiesto
+              </a>
+            </div>
+          </div>
+        )}
+      </details>
 
       {/* Step 3 — Llaves */}
-      <ApiKeysCard
-        orgId={id}
-        getKeyFn={(env) => getKeyFn({ data: { id, env } })}
-        renewKeyFn={(env) => renewKeyFn({ data: { id, env } })}
-        saveKeyFn={(env, key, organization_id) => saveKeyFn({ data: { organization_id, facturapi_org_id: id, env, key } })}
-        localOrgs={(localOrgsQ.data as any[]) ?? []}
-      />
+      <details className="rounded-lg border bg-card" open={!!(hasCert && manifiestoDone)}>
+        <summary className="flex cursor-pointer items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${hasCert && manifiestoDone ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>3</span>
+            Llaves (test → live)
+          </div>
+          <span className="text-[10px] text-muted-foreground">{hasCert && manifiestoDone ? "Expandir" : "Bloqueado"}</span>
+        </summary>
+        <div className="border-t px-5 py-4">
+          <ApiKeysCard
+            orgId={id}
+            getKeyFn={(env) => getKeyFn({ data: { id, env } })}
+            renewKeyFn={(env) => renewKeyFn({ data: { id, env } })}
+            saveKeyFn={(env, key, organization_id) => saveKeyFn({ data: { organization_id, facturapi_org_id: id, env, key } })}
+            localOrgs={(localOrgsQ.data as any[]) ?? []}
+          />
+        </div>
+      </details>
 
       {/* Datos fiscales */}
       <details className="rounded-lg border bg-card">
@@ -491,25 +505,37 @@ function ApiKeysCard({
   saveKeyFn: (env: "test" | "live", key: string, organization_id: string) => Promise<{ ok: boolean }>;
   localOrgs: { id: string; razon_social: string; rfc: string }[];
 }) {
+  const [env, setEnv] = useState<"test" | "live">("test");
   return (
-    <div className="rounded-lg border bg-card p-5">
-      <div className="flex items-center gap-2">
-        <KeyRound className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold">Llaves de API</h3>
+    <div>
+      <div className="mb-4 flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5 text-xs font-medium">
+        <button
+          onClick={() => setEnv("test")}
+          className={`flex-1 rounded-md px-3 py-1.5 text-center transition ${env === "test" ? "bg-card shadow-sm font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Test
+        </button>
+        <button
+          onClick={() => setEnv("live")}
+          className={`flex-1 rounded-md px-3 py-1.5 text-center transition ${env === "live" ? "bg-card shadow-sm font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Live
+        </button>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
-        FacturAPI sólo entrega la llave una vez. Para <b>live</b> necesitas tener el CSD cargado y la organización activada; si no, devolverá vacío.
-      </p>
-      <div className="mt-4 space-y-4">
+      {env === "test" && (
         <div className="rounded-md border bg-secondary/20 p-3">
-          <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Paso 1 · Llave de prueba (test)</div>
+          <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Llave de prueba (test)</div>
+          <p className="mb-3 text-[10px] text-muted-foreground">Usa <b>Obtener</b> para recuperar la llave test existente o <b>Regenerar</b> para crear una nueva.</p>
           <KeyRow env="test" orgId={orgId} getKeyFn={getKeyFn} renewKeyFn={renewKeyFn} saveKeyFn={saveKeyFn} localOrgs={localOrgs} />
         </div>
-        <div className="rounded-md border bg-card p-3">
-          <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Paso 2 · Llave de producción (live)</div>
+      )}
+      {env === "live" && (
+        <div className="rounded-md border bg-amber-50/50 p-3">
+          <div className="mb-2 text-xs font-semibold uppercase text-amber-700">Llave de producción (live)</div>
+          <p className="mb-3 text-[10px] text-amber-600">Necesitas tener el CSD cargado y el manifiesto firmado. Usa <b>Generar</b> para crear una nueva llave live.</p>
           <KeyRow env="live" orgId={orgId} getKeyFn={getKeyFn} renewKeyFn={renewKeyFn} saveKeyFn={saveKeyFn} localOrgs={localOrgs} />
         </div>
-      </div>
+      )}
     </div>
   );
 }
