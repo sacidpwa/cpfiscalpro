@@ -88,13 +88,26 @@ export const fapiGetOrg = createServerFn({ method: "POST" })
 export const fapiCreateOrg = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ name: z.string().trim().min(2).max(200) }).parse(i),
+    z.object({
+      name: z.string().trim().min(2).max(200),
+      legal: z.object({
+        legal_name: z.string().trim().min(1).max(254),
+        tax_id: z.string().trim().regex(/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/, "RFC inválido"),
+        tax_system: z.string().trim().min(2).max(10).optional(),
+        name: z.string().trim().max(254).optional(),
+        address: z.object({
+          zip: z.string().trim().max(10).optional(),
+        }).optional(),
+      }).optional(),
+    }).parse(i),
   )
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context.supabase, context.userId);
+    const body: any = { name: data.name };
+    if (data.legal) body.legal = data.legal;
     return await fapi(`/organizations`, {
       method: "POST",
-      body: JSON.stringify({ name: data.name }),
+      body: JSON.stringify(body),
     });
   });
 
@@ -243,7 +256,7 @@ export const fapiListLocalUnlinked = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: orgs, error } = await supabaseAdmin
       .from("organizations")
-      .select("id, razon_social, rfc, created_at")
+      .select("id, razon_social, rfc, created_at, nombre_comercial, regimen_fiscal, codigo_postal, direccion")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const ids = (orgs ?? []).map((o: any) => o.id);

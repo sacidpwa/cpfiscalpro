@@ -224,7 +224,17 @@ function LocalOrgDetail({ org, onCreate }: { org: any; onCreate: (fapiId: string
     if (!org.razon_social) return;
     setCreating(true);
     try {
-      const fapiOrg: any = await create({ data: { name: org.razon_social } });
+      const payload: any = { name: org.nombre_comercial || org.razon_social };
+      if (org.rfc) {
+        payload.legal = {
+          legal_name: org.razon_social,
+          tax_id: org.rfc,
+          name: org.nombre_comercial || org.razon_social,
+        };
+        if (org.regimen_fiscal) payload.legal.tax_system = org.regimen_fiscal;
+        if (org.codigo_postal) payload.legal.address = { zip: org.codigo_postal };
+      }
+      const fapiOrg: any = await create({ data: payload });
       toast.success(`Organización creada en FacturAPI: ${fapiOrg.id}`);
       qc.invalidateQueries({ queryKey: ["fapi-orgs"] });
       qc.invalidateQueries({ queryKey: ["fapi-local-unlinked"] });
@@ -242,8 +252,11 @@ function LocalOrgDetail({ org, onCreate }: { org: any; onCreate: (fapiId: string
               {org.razon_social || "—"}
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">Local</span>
             </h2>
-            <div className="mt-1 text-xs text-muted-foreground">
-              RFC: <span className="font-mono">{org.rfc ?? "Sin RFC"}</span>
+            <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+              <div>RFC: <span className="font-mono">{org.rfc ?? "Sin RFC"}</span></div>
+              {org.regimen_fiscal && <div>Régimen fiscal: <span className="font-mono">{org.regimen_fiscal}</span></div>}
+              {org.nombre_comercial && <div>Nombre comercial: {org.nombre_comercial}</div>}
+              {org.codigo_postal && <div>CP: <span className="font-mono">{org.codigo_postal}</span></div>}
             </div>
           </div>
         </div>
