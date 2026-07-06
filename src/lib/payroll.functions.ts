@@ -97,14 +97,12 @@ async function loadTables(supabase: any, ejercicio: number) {
   ]);
   if (isr.error || sub.error) throw new Error("No se pudieron cargar las tarifas fiscales");
   if (!isr.data?.length) throw new Error(`Sin tarifa ISR para ${ejercicio}`);
-  // Usar el SMG más alto vigente para la exención (cubre zona libre frontera norte si aplica).
   const smgVal = Number(smg.data?.valor ?? 0);
-  const smfVal = Number(smf.data?.valor ?? 0);
   return {
     isrMensual: isr.data,
     subsidioMensual: sub.data ?? [],
     umaDiaria: Number(uma.data?.valor ?? 113.14),
-    salarioMinimo: Math.max(smgVal, smfVal) || undefined,
+    salarioMinimo: smgVal || undefined,
   };
 }
 
