@@ -125,7 +125,12 @@ function FacturapiAdmin() {
                         <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0 flex-1">
                           <div className="truncate font-medium">{o.legal?.legal_name || o.legal?.name || o.name || "—"}</div>
-                          <div className="truncate text-xs text-muted-foreground">{o.legal?.tax_id ?? "Sin RFC"} · {o.id}</div>
+                          <div className="truncate text-xs text-muted-foreground">{o.legal?.tax_id ?? "Sin RFC"}</div>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <ReadyBadge ok={o.certificate?.has_certificate} label="CSD" />
+                            <ReadyBadge ok={o.is_production_ready} label="Manifiesto" />
+                            <ReadyBadge ok={o._local?.hasLiveKey} label="Llave live" />
+                          </div>
                         </div>
                       </button>
                     </li>
@@ -147,6 +152,19 @@ function FacturapiAdmin() {
         </section>
       </div>
     </div>
+  );
+}
+
+function ReadyBadge({ ok, label }: { ok: boolean | undefined | null; label: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-tight ${
+        ok ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+      {label}
+    </span>
   );
 }
 

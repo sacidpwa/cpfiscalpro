@@ -57,7 +57,22 @@ export const fapiListOrgs = createServerFn({ method: "POST" })
     if (data.page) p.set("page", String(data.page));
     if (data.limit) p.set("limit", String(data.limit));
     const qs = p.toString();
-    return await fapi(`/organizations${qs ? `?${qs}` : ""}`);
+    const result: any = await fapi(`/organizations${qs ? `?${qs}` : ""}`);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: configs } = await supabaseAdmin
+      .from("org_billing_config")
+      .select("facturapi_org_id, facturapi_live_key, organization_id");
+    const keyMap: Record<string, { hasLiveKey: boolean; localOrgId: string }> = {};
+    for (const c of (configs as any[]) ?? []) {
+      if (c.facturapi_org_id) {
+        keyMap[c.facturapi_org_id] = { hasLiveKey: !!c.facturapi_live_key, localOrgId: c.organization_id };
+      }
+    }
+    const enriched = (result.data ?? []).map((o: any) => ({
+      ...o,
+      _local: keyMap[o.id] ?? { hasLiveKey: false, localOrgId: null },
+    }));
+    return { ...result, data: enriched };
   });
 
 // ---------- GET ----------
