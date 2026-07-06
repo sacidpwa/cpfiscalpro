@@ -88,26 +88,13 @@ export const fapiGetOrg = createServerFn({ method: "POST" })
 export const fapiCreateOrg = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({
-      name: z.string().trim().min(2).max(200),
-      legal: z.object({
-        legal_name: z.string().trim().min(1).max(254),
-        tax_id: z.string().trim().regex(/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/, "RFC inválido"),
-        tax_system: z.string().trim().min(2).max(10).optional(),
-        name: z.string().trim().max(254).optional(),
-        address: z.object({
-          zip: z.string().trim().max(10).optional(),
-        }).optional(),
-      }).optional(),
-    }).parse(i),
+    z.object({ name: z.string().trim().min(2).max(200) }).parse(i),
   )
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context.supabase, context.userId);
-    const body: any = { name: data.name };
-    if (data.legal) body.legal = data.legal;
     return await fapi(`/organizations`, {
       method: "POST",
-      body: JSON.stringify(body),
+      body: JSON.stringify({ name: data.name }),
     });
   });
 

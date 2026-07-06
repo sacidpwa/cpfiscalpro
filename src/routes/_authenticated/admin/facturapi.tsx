@@ -217,6 +217,7 @@ function ReadyBadge({ ok, label }: { ok: boolean | undefined | null; label: stri
 
 function LocalOrgDetail({ org, onCreate }: { org: any; onCreate: (fapiId: string) => void }) {
   const create = useServerFn(fapiCreateOrg);
+  const updateLegal = useServerFn(fapiUpdateLegal);
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
 
@@ -224,17 +225,17 @@ function LocalOrgDetail({ org, onCreate }: { org: any; onCreate: (fapiId: string
     if (!org.razon_social) return;
     setCreating(true);
     try {
-      const payload: any = { name: org.nombre_comercial || org.razon_social };
+      const fapiOrg: any = await create({ data: { name: org.nombre_comercial || org.razon_social } });
       if (org.rfc) {
-        payload.legal = {
+        const legal: any = {
           legal_name: org.razon_social,
           tax_id: org.rfc,
           name: org.nombre_comercial || org.razon_social,
         };
-        if (org.regimen_fiscal) payload.legal.tax_system = org.regimen_fiscal;
-        if (org.codigo_postal) payload.legal.address = { zip: org.codigo_postal };
+        if (org.regimen_fiscal) legal.tax_system = org.regimen_fiscal;
+        if (org.codigo_postal) legal.address = { zip: org.codigo_postal };
+        await updateLegal({ data: { id: fapiOrg.id, legal } });
       }
-      const fapiOrg: any = await create({ data: payload });
       toast.success(`Organización creada en FacturAPI: ${fapiOrg.id}`);
       qc.invalidateQueries({ queryKey: ["fapi-orgs"] });
       qc.invalidateQueries({ queryKey: ["fapi-local-unlinked"] });
