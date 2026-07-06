@@ -42,7 +42,9 @@ function parseCFDIEmployee(xmlText: string): Record<string, any> | { error: stri
     nombre = parts.slice(0, parts.length - 2).join(" ");
   }
   const periodicidad = PERIODICIDAD_MAP[g(nominaRec, "PeriodicidadPago")] || "quincenal";
-  const salarioBase = parseFloat(g(nominaRec, "SalarioBaseCotizacion")) || 0;
+  const salarioBase = parseFloat(g(nominaRec, "SalarioBaseCotizacion"))
+    || parseFloat(g(nominaRec, "SalarioDiarioIntegrado"))
+    || 0;
   return {
     numero: g(nominaRec, "NumEmpleado"),
     nombre, apellido_paterno, apellido_materno,
@@ -184,6 +186,7 @@ function Empleados() {
                     <span>CURP: {emp.curp || "—"}</span>
                     <span>Salario: ${emp.salario_diario}</span>
                     <span>Periodicidad: {emp.periodicidad}</span>
+                    {!emp.salario_diario && <span className="col-span-2 flex items-center gap-1 text-amber-600"><AlertCircle className="h-3 w-3" /> Salario en 0 — verifica e ingresa manualmente</span>}
                   </div>
                   {emp.error && <div className="mt-1 flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3" />{emp.error}</div>}
                 </div>
