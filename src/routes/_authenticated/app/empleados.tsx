@@ -7,12 +7,60 @@ import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { calcSDI } from "@/lib/payroll.calc";
 import { fmtMoney, fmtDate } from "@/lib/format";
-import { Users, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, X, Upload, FileText, Check, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/empleados")({
   component: Empleados,
 });
+
+const PERIODICIDAD_MAP: Record<string, string> = {
+  Diaria: "semanal", Semanal: "semanal", Catorcenal: "catorcenal",
+  Quincenal: "quincenal", Mensual: "mensual",
+};
+
+function parseCFDIEmployee(xmlText: string): Record<string, any> | { error: string } {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, "text/xml");
+  if (doc.querySelector("parsererror")) return { error: "El archivo XML no es válido" };
+  const el = (name: string) => Array.from(doc.querySelectorAll("*")).find((e) => e.localName === name);
+  const receptor = el("Receptor");
+  const nomina = el("Nomina");
+  const nominaRec = nomina
+    ? Array.from(nomina.querySelectorAll("*")).find((e) => e.localName === "Receptor")
+    : null;
+  if (!receptor) return { error: "No se encontró el nodo Receptor. ¿Es un CFDI de nómina?" };
+  const g = (e: Element | null | undefined, a: string) => e?.getAttribute(a) ?? "";
+  const nombreCompleto = g(receptor, "Nombre").trim();
+  const parts = nombreCompleto.split(/\s+/);
+  let nombre = "", apellido_paterno = "", apellido_materno = "";
+  if (parts.length === 1) nombre = parts[0];
+  else if (parts.length === 2) { nombre = parts[0]; apellido_paterno = parts[1]; }
+  else if (parts.length >= 3) {
+    apellido_materno = parts[parts.length - 1];
+    apellido_paterno = parts[parts.length - 2];
+    nombre = parts.slice(0, parts.length - 2).join(" ");
+  }
+  const periodicidad = PERIODICIDAD_MAP[g(nominaRec, "PeriodicidadPago")] || "quincenal";
+  const salarioBase = parseFloat(g(nominaRec, "SalarioBaseCotizacion")) || 0;
+  return {
+    numero: g(nominaRec, "NumEmpleado"),
+    nombre, apellido_paterno, apellido_materno,
+    rfc: g(receptor, "Rfc"),
+    curp: g(nominaRec, "Curp"),
+    nss: g(nominaRec, "NumSeguridadSocial"),
+    fecha_alta: g(nominaRec, "FechaInicioRelLaboral").slice(0, 10) || new Date().toISOString().slice(0, 10),
+    puesto: g(nominaRec, "Puesto"),
+    departamento: g(nominaRec, "Departamento"),
+    empresa: "HELIX-LAROSS",
+    salario_diario: salarioBase,
+    periodicidad,
+    cp_fiscal: g(receptor, "DomicilioFiscalReceptor"),
+    regimen_fiscal_receptor: g(receptor, "RegimenFiscalReceptor"),
+    tipo_regimen: g(nominaRec, "TipoRegimen"),
+    riesgo_puesto: parseFloat(g(nominaRec, "RiesgoPuesto")) || undefined,
+  };
+}
 
 function Empleados() {
   const org = useRequireOrg();
@@ -25,6 +73,9 @@ function Empleados() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'numero', dir: 'asc' });
+  const [dragging, setDragging] = useState(false);
+  const [dropData, setDropData] = useState<any[] | null>(null);
+  const [parsing, setParsing] = useState(false);
   const filtered = (data ?? [])
     .filter((e: any) => {
       if (!q.trim()) return true;
@@ -73,19 +124,96 @@ function Empleados() {
     qc.invalidateQueries({ queryKey: ["employees", org.id] });
   }
 
+  async function handleDrop(files: FileList) {
+    setDragging(false);
+    const xmlFiles = Array.from(files).filter((f) => f.name.endsWith(".xml"));
+    if (!xmlFiles.length) { toast.error("Suelta archivos XML de CFDI de nómina"); return; }
+    setParsing(true);
+    const results: any[] = [];
+    for (const file of xmlFiles) {
+      const text = await file.text();
+      results.push(parseCFDIEmployee(text));
+    }
+    setParsing(false);
+    const valid = results.filter((r) => !r.error);
+    if (valid.length) setDropData(valid);
+    else toast.error(results[0]?.error || "No se pudo leer ningún CFDI");
+  }
+  async function confirmDrop() {
+    if (!dropData?.length) return;
+    let creados = 0;
+    for (const emp of dropData) {
+      try { await upsert({ data: { ...emp, organizationId: org.id } }); creados++; }
+      catch { /* skip dupes */ }
+    }
+    toast.success(`${creados} empleados creados`);
+    qc.invalidateQueries({ queryKey: ["employees", org.id] });
+    setDropData(null);
+  }
+
   return (
-    <div>
+    <div
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
+      onDrop={(e) => { e.preventDefault(); handleDrop(e.dataTransfer.files); }}
+    >
+      {dragging && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-primary/10 backdrop-blur-sm">
+          <div className="rounded-xl border-2 border-dashed border-primary bg-card p-12 text-center">
+            {parsing ? <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+              : <Upload className="mx-auto h-12 w-12 text-primary" />}
+            <p className="mt-4 text-lg font-semibold">{parsing ? "Leyendo XML…" : "Suelta los XML de nómina"}</p>
+            <p className="text-sm text-muted-foreground">Se extraerán los datos de los empleados automáticamente</p>
+          </div>
+        </div>
+      )}
+      {dropData && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setDropData(null)}>
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-4 text-lg font-semibold">Empleados detectados ({dropData.length})</h2>
+            <div className="space-y-3">
+              {dropData.map((emp, i) => (
+                <div key={i} className="rounded-md border bg-secondary/20 p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="truncate font-medium">{emp.nombre} {emp.apellido_paterno} {emp.apellido_materno}</span>
+                    <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{emp.rfc}</span>
+                  </div>
+                  <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span>NSS: {emp.nss || "—"}</span>
+                    <span>CURP: {emp.curp || "—"}</span>
+                    <span>Salario: ${emp.salario_diario}</span>
+                    <span>Periodicidad: {emp.periodicidad}</span>
+                  </div>
+                  {emp.error && <div className="mt-1 flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3" />{emp.error}</div>}
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDropData(null)} className="rounded-md border bg-card px-3 py-1.5 text-sm hover:bg-secondary">Cancelar</button>
+              <button onClick={confirmDrop} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90">
+                <Check className="h-4 w-4" /> Crear {dropData.length} empleados
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <PageHeader title="Empleados" description="Plantilla activa para nómina"
         actions={<button onClick={() => { setEditing(null); setOpen(true); }} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"><Plus className="h-4 w-4"/>Nuevo</button>} />
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="mb-4">
-          <input
-            type="search"
-            placeholder="Buscar por nombre, RFC, CURP, NSS, puesto…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="w-full max-w-md rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="search"
+              placeholder="Buscar por nombre, RFC, CURP, NSS, puesto…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="w-full max-w-md rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+            <span className="hidden items-center gap-1 rounded-md border border-dashed bg-card px-2 py-1.5 text-[11px] text-muted-foreground sm:inline-flex">
+              <Upload className="h-3 w-3" /> Arrastra XML de nómina
+            </span>
+          </div>
         </div>
         {isLoading ? <p className="text-sm text-muted-foreground">Cargando…</p>
           : !data?.length ? (
