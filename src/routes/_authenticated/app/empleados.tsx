@@ -301,7 +301,7 @@ function Empleados() {
             </>
           )}
       </div>
-      {open && <EmpForm initial={editing} empresaOptions={[...new Set((data ?? []).map((e: any) => e.empresa).filter(Boolean))]} onClose={() => { setOpen(false); setEditing(null); }} onSave={save} />}
+      {open && <EmpForm initial={editing} onClose={() => { setOpen(false); setEditing(null); }} onSave={save} />}
     </div>
   );
 }
@@ -322,7 +322,7 @@ function fmtDateInput(v: any): string {
   return "";
 }
 
-function EmpForm({ initial, onClose, onSave, empresaOptions: opts }: { initial: any; onClose: () => void; onSave: (f: any) => void; empresaOptions?: string[] }) {
+function EmpForm({ initial, onClose, onSave }: { initial: any; onClose: () => void; onSave: (f: any) => void }) {
   const [f, setF] = useState({
     id: initial?.id,
     numero: initial?.numero ?? "",
@@ -371,7 +371,7 @@ function EmpForm({ initial, onClose, onSave, empresaOptions: opts }: { initial: 
           <Input label="Nombre(s)" value={f.nombre} onChange={(v) => setF({ ...f, nombre: v })} required className="col-span-2"/>
           <Input label="Apellido paterno" value={f.apellido_paterno} onChange={(v) => setF({ ...f, apellido_paterno: v })} />
           <Input label="Apellido materno" value={f.apellido_materno} onChange={(v) => setF({ ...f, apellido_materno: v })} />
-          <Select label="Empresa" value={f.empresa} options={(opts?.length ? opts : ["HELIX-LAROSS", "HELIX"]).map((e) => [e, e])} onChange={(v) => setF({ ...f, empresa: v })} required />
+          <Input label="Empresa" value={f.empresa} onChange={(v) => setF({ ...f, empresa: v })} required />
           <Input label="RFC" value={f.rfc} mono onChange={(v) => setF({ ...f, rfc: v.toUpperCase() })} />
           <Input label="CURP" value={f.curp} mono onChange={(v) => setF({ ...f, curp: v.toUpperCase() })} />
           <Input label="NSS" value={f.nss} mono onChange={(v) => setF({ ...f, nss: v })} />
