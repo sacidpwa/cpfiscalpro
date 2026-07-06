@@ -249,10 +249,8 @@ export const runPayroll = createServerFn({ method: "POST" })
       .gte("fecha", period.fecha_inicio)
       .lte("fecha", period.fecha_fin);
 
-    const allUnpaidCodes = new Set([...faltaCodes, ...otherUnpaidCodes]);
     const faltasPorEmp = new Map<string, number>();
     const otrosDiasPorEmp = new Map<string, number>();
-    const trabajadosPorEmp = new Map<string, number>();
     (asist ?? []).forEach((a: any) => {
       const codes = [a.incident_code, ...(a.extra_codes ?? [])];
       if (codes.some((c: string) => faltaCodes.has(c))) {
@@ -260,9 +258,6 @@ export const runPayroll = createServerFn({ method: "POST" })
       }
       if (codes.some((c: string) => otherUnpaidCodes.has(c))) {
         otrosDiasPorEmp.set(a.employee_id, (otrosDiasPorEmp.get(a.employee_id) ?? 0) + 1);
-      }
-      if (!codes.some((c: string) => allUnpaidCodes.has(c))) {
-        trabajadosPorEmp.set(a.employee_id, (trabajadosPorEmp.get(a.employee_id) ?? 0) + 1);
       }
     });
 
@@ -290,17 +285,9 @@ export const runPayroll = createServerFn({ method: "POST" })
     const fFalta = factorFalta[period.periodicidad as Periodicity];
 
     for (const emp of emps ?? []) {
-      // Días efectivamente trabajados (sin incidencia no pagada)
+      // Siempre se asiste por defecto; solo se descuenta si hay falta o modificador explícito
       const faltas = faltasPorEmp.get(emp.id) ?? 0;
       const otrosDias = otrosDiasPorEmp.get(emp.id) ?? 0;
-      // Si el empleado no tiene ningún registro de asistencia, asumir que trabajó todos los días
-      const tieneAsistencia = (asist ?? []).some((a: any) => a.employee_id === emp.id);
-      const trabajados = tieneAsistencia ? (trabajadosPorEmp.get(emp.id) ?? 0) : period.dias;
-      // Si no trabajó ningún día (p.ej. incapacidad toda la semana), no hay salario ni descanso
-      if (trabajados === 0) {
-        results.push({ empleado: emp.nombre, neto: 0, saltado: true });
-        continue;
-      }
       const diasDescontados = Math.round((faltas * fFalta + otrosDias) * 10000) / 10000;
       const diasPagados = Math.max(0, Math.round((period.dias - diasDescontados) * 10000) / 10000);
       const importeFalta = Math.round(Number(emp.salario_diario) * diasDescontados * 100) / 100;
@@ -385,8 +372,7 @@ export const runPayroll = createServerFn({ method: "POST" })
     }
 
     await supabase.from("payroll_periods").update({ estatus: "calculado" }).eq("id", period.id);
-    const pagados = results.filter((r: any) => !r.saltado);
-    return { calculados: pagados.length, saltados: results.length - pagados.length, totalNeto: pagados.reduce((s: number, r: any) => s + r.neto, 0) };
+    return { calculados: results.length, saltados: 0, totalNeto: results.reduce((s: number, r: any) => s + r.neto, 0) };
   });
 
 export const getPeriodReceipts = createServerFn({ method: "POST" })
