@@ -31,7 +31,7 @@ function FacturapiAdmin() {
   const listLocalUnlinked = useServerFn(fapiListLocalUnlinked);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<{ kind: 'fapi' | 'local'; id: string } | null>(null);
+  const [selected, setSelected] = useState<{ kind: 'fapi'; id: string } | { kind: 'local'; data: any } | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -158,13 +158,13 @@ function FacturapiAdmin() {
                 <div className="border-t px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sin registrar en FacturAPI</div>
                 <ul className="divide-y">
                   {localUnlinked.map((o: any) => {
-                    const active = selected?.kind === 'local' && o.id === selected.id;
+                    const active = selected?.kind === 'local' && o.id === selected.data.id;
                     return (
-                      <li key={o.id}>
-                        <button
-                          onClick={() => setSelected({ kind: 'local', id: o.id })}
-                          className={`flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-secondary ${active ? "bg-secondary" : ""}`}
-                        >
+                          <li key={o.id}>
+                            <button
+                              onClick={() => setSelected({ kind: 'local', data: o })}
+                              className={`flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-secondary ${active ? "bg-secondary" : ""}`}
+                            >
                           <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                           <div className="min-w-0 flex-1">
                             <div className="truncate font-medium">{o.razon_social || "—"}</div>
@@ -188,7 +188,7 @@ function FacturapiAdmin() {
             <OrgDetail id={selected.id} onDeleted={() => { setSelected(null); qc.invalidateQueries({ queryKey: ["fapi-orgs"] }); }} />
           ) : selected?.kind === 'local' ? (
             <LocalOrgDetail
-              localId={selected.id}
+              org={selected.data}
               onCreate={(fapiId) => { setSelected({ kind: 'fapi', id: fapiId }); qc.invalidateQueries({ queryKey: ["fapi-orgs"] }); qc.invalidateQueries({ queryKey: ["fapi-local-unlinked"] }); }}
             />
           ) : (
@@ -215,21 +215,10 @@ function ReadyBadge({ ok, label }: { ok: boolean | undefined | null; label: stri
   );
 }
 
-function LocalOrgDetail({ localId, onCreate }: { localId: string; onCreate: (fapiId: string) => void }) {
-  const listLocalUnlinked = useServerFn(fapiListLocalUnlinked);
+function LocalOrgDetail({ org, onCreate }: { org: any; onCreate: (fapiId: string) => void }) {
   const create = useServerFn(fapiCreateOrg);
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
-
-  const orgQ = useQuery({
-    queryKey: ["local-org", localId],
-    queryFn: async () => {
-      const all: any[] = await listLocalUnlinked();
-      return all.find((o: any) => o.id === localId);
-    },
-  });
-
-  const org: any = orgQ.data ?? {};
 
   async function handleCreate() {
     if (!org.razon_social) return;
@@ -242,10 +231,6 @@ function LocalOrgDetail({ localId, onCreate }: { localId: string; onCreate: (fap
       onCreate(fapiOrg.id);
     } catch (e) { toast.error((e as Error).message); }
     finally { setCreating(false); }
-  }
-
-  if (orgQ.isLoading) {
-    return <div className="grid place-items-center rounded-lg border bg-card p-12 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>;
   }
 
   return (
