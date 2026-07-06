@@ -246,16 +246,34 @@ export const fapiGetLocalBilling = createServerFn({ method: "POST" })
 export const fapiSetEnvironment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ facturapi_org_id: z.string().min(1), environment: z.enum(["test", "live"]) }).parse(i),
+    z.object({
+      facturapi_org_id: z.string().min(1),
+      organization_id: z.string().uuid().optional(),
+      environment: z.enum(["test", "live"]),
+    }).parse(i),
   )
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("org_billing_config")
-      .update({ environment: data.environment, updated_by: context.userId })
-      .eq("facturapi_org_id", data.facturapi_org_id);
-    if (error) throw new Error(error.message);
+    const patch: Record<string, any> = {
+      environment: data.environment,
+      updated_by: context.userId,
+    };
+    // If we have the local org ID, upsert by it (works even if no row exists yet)
+    if (data.organization_id) {
+      patch.organization_id = data.organization_id;
+      patch.facturapi_org_id = data.facturapi_org_id;
+      const { error } = await supabaseAdmin
+        .from("org_billing_config")
+        .upsert(patch, { onConflict: "organization_id" });
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin
+        .from("org_billing_config")
+        .update(patch)
+        .eq("facturapi_org_id", data.facturapi_org_id);
+      if (error) throw new Error(error.message);
+    }
     return { ok: true };
   });
 

@@ -187,7 +187,7 @@ function FacturapiAdmin() {
 
         <section>
           {selected?.kind === 'fapi' ? (
-            <OrgDetail id={selected.id} onDeleted={() => { setSelected(null); qc.invalidateQueries({ queryKey: ["fapi-orgs"] }); }} />
+            <OrgDetail id={selected.id} localOrgId={selected._local?.localOrgId} onDeleted={() => { setSelected(null); qc.invalidateQueries({ queryKey: ["fapi-orgs"] }); }} />
           ) : selected?.kind === 'local' ? (
             <LocalOrgDetail
               org={selected.data}
@@ -287,7 +287,7 @@ function LocalOrgDetail({ org, onCreate }: { org: any; onCreate: (fapiId: string
   );
 }
 
-function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
+function OrgDetail({ id, localOrgId, onDeleted }: { id: string; localOrgId?: string | null; onDeleted: () => void }) {
   const getFn = useServerFn(fapiGetOrg);
   const updateLegalFn = useServerFn(fapiUpdateLegal);
   const deleteFn = useServerFn(fapiDeleteOrg);
@@ -347,7 +347,7 @@ function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
   });
   const currentEnv = billingQ.data?.environment ?? "test";
   const setEnvMut = useMutation({
-    mutationFn: (env: "test" | "live") => setEnvFn({ data: { facturapi_org_id: id, environment: env } }),
+    mutationFn: (env: "test" | "live") => setEnvFn({ data: { facturapi_org_id: id, organization_id: localOrgId, environment: env } }),
     onSuccess: () => {
       toast.success("Modo cambiado");
       billingQ.refetch();
