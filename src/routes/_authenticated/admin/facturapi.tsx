@@ -202,6 +202,19 @@ function FacturapiAdmin() {
   );
 }
 
+function StepHeader({ num, label, done, current }: { num: number; label: string; done: boolean; current: boolean }) {
+  return (
+    <div className={`flex items-center gap-2 px-4 py-3 ${current ? "bg-primary/5 font-semibold text-primary" : done ? "text-emerald-700" : "text-muted-foreground"}`}>
+      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+        done ? "bg-emerald-500 text-white" : current ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+      }`}>
+        {done ? <Check className="h-3 w-3" /> : num}
+      </span>
+      <span className="truncate">{label}</span>
+    </div>
+  );
+}
+
 function ReadyBadge({ ok, label }: { ok: boolean | undefined | null; label: string }) {
   return (
     <span
@@ -350,25 +363,22 @@ function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
     return <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">{(orgQ.error as Error).message}</div>;
   }
 
+  const hasCert = org.certificate?.has_certificate;
+  const pendingSteps: { type: string; description: string }[] = org.pending_steps ?? [];
+  const manifiestoDone = !pendingSteps.some((s) => s.type === "manifiesto");
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="rounded-lg border bg-card p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-xs uppercase text-muted-foreground">FacturAPI Org ID</div>
             <div className="font-mono text-sm">{org.id}</div>
             <h2 className="mt-2 text-lg font-semibold">{formLegal.legal_name || formLegal.name || "—"}</h2>
-            <div className="text-xs text-muted-foreground">{legal0.tax_id ?? "Sin RFC asignado"}</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">{legal0.tax_id ?? "Sin RFC asignado"}</div>
           </div>
           <div className="flex shrink-0 gap-2">
-            <a
-              href="https://dashboard.facturapi.io/settings/manifiesto"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-md border border-primary/40 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10"
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> Firmar manifiesto
-            </a>
             <button
               onClick={() => { if (confirm("¿Eliminar esta organización de FacturAPI? Esta acción es definitiva.")) delMut.mutate(); }}
               disabled={delMut.isPending}
@@ -380,6 +390,45 @@ function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
         </div>
       </div>
 
+      {/* Step progress */}
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="grid grid-cols-3 divide-x text-center text-xs">
+          <StepHeader num={1} label="CSD" done={hasCert} current={!hasCert} />
+          <StepHeader num={2} label="Manifiesto" done={manifiestoDone} current={hasCert && !manifiestoDone} />
+          <StepHeader num={3} label="Llaves (test → live)" done={false} current={hasCert && manifiestoDone} />
+        </div>
+      </div>
+
+      {/* Step 1 — CSD */}
+      <CertificateCard orgId={id} />
+
+      {/* Step 2 — Manifiesto */}
+      <div className="rounded-lg border bg-card p-5">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className={`h-4 w-4 ${manifiestoDone ? "text-emerald-600" : "text-muted-foreground"}`} />
+          <h3 className="text-sm font-semibold">Firmar Carta Manifiesto</h3>
+          {manifiestoDone && <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">Completado</span>}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {manifiestoDone
+            ? "La carta manifiesto ya fue firmada. La organización está lista para producción."
+            : hasCert
+              ? "Una vez cargado el CSD, ingresa al dashboard de FacturAPI para firmar la carta manifiesto."
+              : "Primero carga el CSD en el paso anterior."}
+        </p>
+        <div className="mt-3 flex gap-2">
+          <a
+            href="https://dashboard.facturapi.io/settings/manifiesto"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium ${hasCert && !manifiestoDone ? "border-primary/40 text-primary hover:bg-primary/10" : "pointer-events-none opacity-40"}`}
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Ir a firmar manifiesto
+          </a>
+        </div>
+      </div>
+
+      {/* Step 3 — Llaves */}
       <ApiKeysCard
         orgId={id}
         getKeyFn={(env) => getKeyFn({ data: { id, env } })}
@@ -388,14 +437,14 @@ function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
         localOrgs={(localOrgsQ.data as any[]) ?? []}
       />
 
-      <CertificateCard orgId={id} />
-
-
-      <div className="rounded-lg border bg-card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Datos fiscales</h3>
+      {/* Datos fiscales */}
+      <details className="rounded-lg border bg-card">
+        <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-muted-foreground hover:text-foreground">
+          Datos fiscales (editar)
+        </summary>
+        <div className="border-t px-5 py-4">
           {legal && (
-            <div className="flex gap-2">
+            <div className="mb-4 flex justify-end gap-2">
               <button onClick={() => setLegal(null)} className="rounded-md border px-3 py-1.5 text-xs hover:bg-secondary">Cancelar</button>
               <button
                 onClick={() => saveMut.mutate()}
@@ -407,30 +456,28 @@ function OrgDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
               </button>
             </div>
           )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input label="RFC" value={formLegal.tax_id} onChange={(v) => setL({ tax_id: v.toUpperCase() })} placeholder="XAXX010101000" />
+            <Input label="Régimen fiscal (SAT)" value={formLegal.tax_system} onChange={(v) => setL({ tax_system: v })} placeholder="601, 612, 626…" />
+            <Input label="Nombre comercial" value={formLegal.name} onChange={(v) => setL({ name: v })} />
+            <Input label="Razón social" value={formLegal.legal_name} onChange={(v) => setL({ legal_name: v })} />
+            <Input label="Teléfono" value={formLegal.phone} onChange={(v) => setL({ phone: v })} />
+            <Input label="Sitio web" value={formLegal.website} onChange={(v) => setL({ website: v })} />
+          </div>
+          <h4 className="mt-5 mb-2 text-xs font-semibold uppercase text-muted-foreground">Domicilio fiscal</h4>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input label="Calle" value={formLegal.address.street} onChange={(v) => setA({ street: v })} className="sm:col-span-2" />
+            <Input label="No. exterior" value={formLegal.address.exterior} onChange={(v) => setA({ exterior: v })} />
+            <Input label="No. interior" value={formLegal.address.interior} onChange={(v) => setA({ interior: v })} />
+            <Input label="Colonia" value={formLegal.address.neighborhood} onChange={(v) => setA({ neighborhood: v })} />
+            <Input label="C.P." value={formLegal.address.zip} onChange={(v) => setA({ zip: v })} />
+            <Input label="Ciudad" value={formLegal.address.city} onChange={(v) => setA({ city: v })} />
+            <Input label="Municipio/Alcaldía" value={formLegal.address.municipality} onChange={(v) => setA({ municipality: v })} />
+            <Input label="Estado" value={formLegal.address.state} onChange={(v) => setA({ state: v })} />
+            <Input label="País" value={formLegal.address.country} onChange={(v) => setA({ country: v })} />
+          </div>
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input label="RFC" value={formLegal.tax_id} onChange={(v) => setL({ tax_id: v.toUpperCase() })} placeholder="XAXX010101000" />
-          <Input label="Régimen fiscal (SAT)" value={formLegal.tax_system} onChange={(v) => setL({ tax_system: v })} placeholder="601, 612, 626…" />
-          <Input label="Nombre comercial" value={formLegal.name} onChange={(v) => setL({ name: v })} />
-          <Input label="Razón social" value={formLegal.legal_name} onChange={(v) => setL({ legal_name: v })} />
-          <Input label="Teléfono" value={formLegal.phone} onChange={(v) => setL({ phone: v })} />
-          <Input label="Sitio web" value={formLegal.website} onChange={(v) => setL({ website: v })} />
-        </div>
-
-        <h4 className="mt-5 mb-2 text-xs font-semibold uppercase text-muted-foreground">Domicilio fiscal</h4>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input label="Calle" value={formLegal.address.street} onChange={(v) => setA({ street: v })} className="sm:col-span-2" />
-          <Input label="No. exterior" value={formLegal.address.exterior} onChange={(v) => setA({ exterior: v })} />
-          <Input label="No. interior" value={formLegal.address.interior} onChange={(v) => setA({ interior: v })} />
-          <Input label="Colonia" value={formLegal.address.neighborhood} onChange={(v) => setA({ neighborhood: v })} />
-          <Input label="C.P." value={formLegal.address.zip} onChange={(v) => setA({ zip: v })} />
-          <Input label="Ciudad" value={formLegal.address.city} onChange={(v) => setA({ city: v })} />
-          <Input label="Municipio/Alcaldía" value={formLegal.address.municipality} onChange={(v) => setA({ municipality: v })} />
-          <Input label="Estado" value={formLegal.address.state} onChange={(v) => setA({ state: v })} />
-          <Input label="País" value={formLegal.address.country} onChange={(v) => setA({ country: v })} />
-        </div>
-      </div>
+      </details>
     </div>
   );
 }
@@ -453,10 +500,15 @@ function ApiKeysCard({
       <p className="mt-1 text-xs text-muted-foreground">
         FacturAPI sólo entrega la llave una vez. Para <b>live</b> necesitas tener el CSD cargado y la organización activada; si no, devolverá vacío.
       </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {(["test", "live"] as const).map((env) => (
-          <KeyRow key={env} env={env} orgId={orgId} getKeyFn={getKeyFn} renewKeyFn={renewKeyFn} saveKeyFn={saveKeyFn} localOrgs={localOrgs} />
-        ))}
+      <div className="mt-4 space-y-4">
+        <div className="rounded-md border bg-secondary/20 p-3">
+          <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Paso 1 · Llave de prueba (test)</div>
+          <KeyRow env="test" orgId={orgId} getKeyFn={getKeyFn} renewKeyFn={renewKeyFn} saveKeyFn={saveKeyFn} localOrgs={localOrgs} />
+        </div>
+        <div className="rounded-md border bg-card p-3">
+          <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Paso 2 · Llave de producción (live)</div>
+          <KeyRow env="live" orgId={orgId} getKeyFn={getKeyFn} renewKeyFn={renewKeyFn} saveKeyFn={saveKeyFn} localOrgs={localOrgs} />
+        </div>
       </div>
     </div>
   );
