@@ -235,6 +235,28 @@ export const fapiListLocalOrgs = createServerFn({ method: "POST" })
     return data ?? [];
   });
 
+// ---------- LIST LOCAL ORGS WITHOUT FacturAPI LINK ----------
+export const fapiListLocalUnlinked = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertPlatformAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: orgs, error } = await supabaseAdmin
+      .from("organizations")
+      .select("id, razon_social, rfc, created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const ids = (orgs ?? []).map((o: any) => o.id);
+    if (!ids.length) return [];
+    const { data: configs } = await supabaseAdmin
+      .from("org_billing_config")
+      .select("organization_id")
+      .in("organization_id", ids)
+      .not("facturapi_org_id", "is", null);
+    const linked = new Set((configs ?? []).map((c: any) => c.organization_id));
+    return (orgs ?? []).filter((o: any) => !linked.has(o.id));
+  });
+
 // ---------- UPLOAD CSD (sellos digitales) ----------
 export const fapiUploadCertificate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

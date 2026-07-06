@@ -13,6 +13,7 @@ import {
   fapiRenewApiKey,
   fapiSaveKeyToOrg,
   fapiListLocalOrgs,
+  fapiListLocalUnlinked,
   fapiUploadCertificate,
 } from "@/lib/facturapi-admin.functions";
 import { PageHeader } from "@/components/app-ui";
@@ -27,15 +28,21 @@ export const Route = createFileRoute("/_authenticated/admin/facturapi")({
 function FacturapiAdmin() {
   const list = useServerFn(fapiListOrgs);
   const create = useServerFn(fapiCreateOrg);
+  const listLocalUnlinked = useServerFn(fapiListLocalUnlinked);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<{ kind: 'fapi' | 'local'; id: string } | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
 
   const orgsQ = useQuery({
     queryKey: ["fapi-orgs", q],
     queryFn: () => list({ data: { q: q || undefined, limit: 50 } }),
+  });
+
+  const localUnlinkedQ = useQuery({
+    queryKey: ["fapi-local-unlinked"],
+    queryFn: () => listLocalUnlinked(),
   });
 
   const createMut = useMutation({
@@ -45,12 +52,13 @@ function FacturapiAdmin() {
       setShowNew(false);
       setNewName("");
       qc.invalidateQueries({ queryKey: ["fapi-orgs"] });
-      setSelectedId(org.id);
+      setSelected({ kind: 'fapi', id: org.id });
     },
     onError: (e) => toast.error((e as Error).message),
   });
 
   const orgs: any[] = (orgsQ.data as any)?.data ?? (Array.isArray(orgsQ.data) ? orgsQ.data : []);
+  const localUnlinked: any[] = localUnlinkedQ.data ?? [];
 
   return (
     <div>
@@ -104,46 +112,85 @@ function FacturapiAdmin() {
           )}
 
           <div className="max-h-[70vh] overflow-y-auto">
+            {/* ── FacturAPI orgs ── */}
             {orgsQ.isLoading ? (
-              <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
-              </div>
+              <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
             ) : orgsQ.error ? (
               <div className="p-4 text-sm text-destructive">Error: {(orgsQ.error as Error).message}</div>
+            ) : (
+              <>
+                {orgs.length > 0 && (
+                  <>
+                    <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Registradas en FacturAPI</div>
+                    <ul className="divide-y">
+                      {orgs.map((o: any) => {
+                        const active = selected?.kind === 'fapi' && o.id === selected.id;
+                        return (
+                          <li key={o.id}>
+                            <button
+                              onClick={() => setSelected({ kind: 'fapi', id: o.id })}
+                              className={`flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-secondary ${active ? "bg-secondary" : ""}`}
+                            >
+                              <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-medium">{o.legal?.legal_name || o.legal?.name || o.name || "—"}</div>
+                                <div className="truncate text-xs text-muted-foreground">{o.legal?.tax_id ?? "Sin RFC"}</div>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  <ReadyBadge ok={o.certificate?.has_certificate} label="CSD" />
+                                  <ReadyBadge ok={o.is_production_ready} label="Manifiesto" />
+                                  <ReadyBadge ok={o._local?.hasLiveKey} label="Llave live" />
+                                </div>
+                              </div>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                )}
+              </>
+            )}
+            {/* ── Local orgs without FacturAPI ── */}
+            {localUnlinkedQ.isLoading ? (
+              <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
+            ) : localUnlinked.length > 0 ? (
+              <>
+                <div className="border-t px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sin registrar en FacturAPI</div>
+                <ul className="divide-y">
+                  {localUnlinked.map((o: any) => {
+                    const active = selected?.kind === 'local' && o.id === selected.id;
+                    return (
+                      <li key={o.id}>
+                        <button
+                          onClick={() => setSelected({ kind: 'local', id: o.id })}
+                          className={`flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-secondary ${active ? "bg-secondary" : ""}`}
+                        >
+                          <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-medium">{o.razon_social || "—"}</div>
+                            <div className="truncate text-xs text-muted-foreground">{o.rfc ?? "Sin RFC"}</div>
+                            <div className="mt-1"><span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">No registrada</span></div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             ) : orgs.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground">No hay organizaciones.</div>
-            ) : (
-              <ul className="divide-y">
-                {orgs.map((o: any) => {
-                  const active = o.id === selectedId;
-                  return (
-                    <li key={o.id}>
-                      <button
-                        onClick={() => setSelectedId(o.id)}
-                        className={`flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-secondary ${active ? "bg-secondary" : ""}`}
-                      >
-                        <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium">{o.legal?.legal_name || o.legal?.name || o.name || "—"}</div>
-                          <div className="truncate text-xs text-muted-foreground">{o.legal?.tax_id ?? "Sin RFC"}</div>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            <ReadyBadge ok={o.certificate?.has_certificate} label="CSD" />
-                            <ReadyBadge ok={o.is_production_ready} label="Manifiesto" />
-                            <ReadyBadge ok={o._local?.hasLiveKey} label="Llave live" />
-                          </div>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            ) : null}
           </div>
         </aside>
 
         <section>
-          {selectedId ? (
-            <OrgDetail id={selectedId} onDeleted={() => { setSelectedId(null); qc.invalidateQueries({ queryKey: ["fapi-orgs"] }); }} />
+          {selected?.kind === 'fapi' ? (
+            <OrgDetail id={selected.id} onDeleted={() => { setSelected(null); qc.invalidateQueries({ queryKey: ["fapi-orgs"] }); }} />
+          ) : selected?.kind === 'local' ? (
+            <LocalOrgDetail
+              localId={selected.id}
+              onCreate={(fapiId) => { setSelected({ kind: 'fapi', id: fapiId }); qc.invalidateQueries({ queryKey: ["fapi-orgs"] }); qc.invalidateQueries({ queryKey: ["fapi-local-unlinked"] }); }}
+            />
           ) : (
             <div className="grid h-full place-items-center rounded-lg border bg-card p-12 text-sm text-muted-foreground">
               Selecciona una organización para ver el detalle.
@@ -165,6 +212,73 @@ function ReadyBadge({ ok, label }: { ok: boolean | undefined | null; label: stri
       <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
       {label}
     </span>
+  );
+}
+
+function LocalOrgDetail({ localId, onCreate }: { localId: string; onCreate: (fapiId: string) => void }) {
+  const listLocalUnlinked = useServerFn(fapiListLocalUnlinked);
+  const create = useServerFn(fapiCreateOrg);
+  const qc = useQueryClient();
+  const [creating, setCreating] = useState(false);
+
+  const orgQ = useQuery({
+    queryKey: ["local-org", localId],
+    queryFn: async () => {
+      const all: any[] = await listLocalUnlinked();
+      return all.find((o: any) => o.id === localId);
+    },
+  });
+
+  const org: any = orgQ.data ?? {};
+
+  async function handleCreate() {
+    if (!org.razon_social) return;
+    setCreating(true);
+    try {
+      const fapiOrg: any = await create({ data: { name: org.razon_social } });
+      toast.success(`Organización creada en FacturAPI: ${fapiOrg.id}`);
+      qc.invalidateQueries({ queryKey: ["fapi-orgs"] });
+      qc.invalidateQueries({ queryKey: ["fapi-local-unlinked"] });
+      onCreate(fapiOrg.id);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setCreating(false); }
+  }
+
+  if (orgQ.isLoading) {
+    return <div className="grid place-items-center rounded-lg border bg-card p-12 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border bg-card p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              {org.razon_social || "—"}
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">Local</span>
+            </h2>
+            <div className="mt-1 text-xs text-muted-foreground">
+              RFC: <span className="font-mono">{org.rfc ?? "Sin RFC"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-lg border bg-card p-5">
+        <h3 className="mb-3 text-sm font-semibold">Registrar en FacturAPI</h3>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Esta organización solo existe en la base de datos local. Créala en FacturAPI para poder administrar su CSD, firmar el manifiesto y generar llaves de API.
+        </p>
+        <button
+          onClick={handleCreate}
+          disabled={creating || !org.razon_social}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        >
+          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {creating ? "Creando…" : `Crear "${org.razon_social}" en FacturAPI`}
+        </button>
+      </div>
+    </div>
   );
 }
 
