@@ -409,19 +409,23 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
         try {
           if (isStamped) {
             const tasks: Array<Promise<void>> = [];
-            if (s.pdf_path) tasks.push((async () => {
-              const { base64 } = await dlUrl({ data: { stampId: s.id, kind: "pdf" } });
-              const bin = atob(base64);
-              const bytes = new Uint8Array(bin.length);
-              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-              zip.file(`timbrados/${safeName}.pdf`, bytes);
+            tasks.push((async () => {
+              try {
+                const { base64 } = await dlUrl({ data: { stampId: s.id, kind: "pdf" } });
+                const bin = atob(base64);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                zip.file(`timbrados/${safeName}.pdf`, bytes);
+              } catch { /* sin archivo PDF */ }
             })());
-            if (s.xml_path) tasks.push((async () => {
-              const { base64 } = await dlUrl({ data: { stampId: s.id, kind: "xml" } });
-              const bin = atob(base64);
-              const bytes = new Uint8Array(bin.length);
-              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-              zip.file(`timbrados/${safeName}.xml`, bytes);
+            tasks.push((async () => {
+              try {
+                const { base64 } = await dlUrl({ data: { stampId: s.id, kind: "xml" } });
+                const bin = atob(base64);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                zip.file(`timbrados/${safeName}.xml`, bytes);
+              } catch { /* sin archivo XML */ }
             })());
             await Promise.all(tasks);
           } else {
@@ -628,8 +632,8 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
                     <span title={s.uuid_sat} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] ${s.ambiente === "live" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-amber-500/10 text-amber-700 dark:text-amber-400"}`}>
                       <CheckCircle2 className="h-3 w-3" /> {s.ambiente}
                     </span>
-                    {s.pdf_path && <button onClick={() => descargar(s.id, "pdf")} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary"><FileDown className="h-3 w-3"/>PDF</button>}
-                    {s.xml_path && <button onClick={() => descargar(s.id, "xml")} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary">XML</button>}
+                    <button onClick={() => descargar(s.id, "pdf")} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary"><FileDown className="h-3 w-3"/>PDF</button>
+                    <button onClick={() => descargar(s.id, "xml")} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary">XML</button>
                     <button
                       onClick={() => enviarUno(r.id, [r.employee?.nombre, r.employee?.apellido_paterno].filter(Boolean).join(" "), r.employee?.email)}
                       disabled={sendingOne === r.id || !r.employee?.email}
@@ -649,6 +653,9 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
                   </>
                 ) : s?.estatus === "error" ? (
                   <>
+                    <button onClick={() => descargarRecibo(r)} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary">
+                      <FileDown className="h-3 w-3"/> PDF
+                    </button>
                     <button onClick={() => timbrarMut.mutate(r.id)} title={s.error_message} className="inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs text-destructive hover:bg-destructive/20">
                       <AlertCircle className="h-3.5 w-3.5"/> Reintentar
                     </button>
@@ -717,8 +724,8 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
                         <span title={s.uuid_sat} className={`inline-flex items-center gap-1 text-xs ${s.ambiente === "live" ? "text-emerald-600" : "text-amber-600"}`}>
                           <CheckCircle2 className="h-3.5 w-3.5" /> {s.ambiente}
                         </span>
-                        {s.pdf_path && <button onClick={() => descargar(s.id, "pdf")} className="rounded p-1 hover:bg-secondary" title="PDF CFDI"><FileDown className="h-3.5 w-3.5" /></button>}
-                        {s.xml_path && <button onClick={() => descargar(s.id, "xml")} className="rounded p-1 text-xs hover:bg-secondary" title="XML">XML</button>}
+                        <button onClick={() => descargar(s.id, "pdf")} className="rounded p-1 hover:bg-secondary" title="PDF CFDI"><FileDown className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => descargar(s.id, "xml")} className="rounded p-1 text-xs hover:bg-secondary" title="XML">XML</button>
                         <button
                           onClick={() => enviarUno(r.id, [r.employee?.nombre, r.employee?.apellido_paterno].filter(Boolean).join(" "), r.employee?.email)}
                           disabled={sendingOne === r.id || !r.employee?.email}
@@ -744,6 +751,7 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
                     ) : s?.estatus === "error" ? (
                       <div className="flex items-center justify-center gap-1.5">
                         <button onClick={() => setPreviewId(r.id)} className="rounded p-1 hover:bg-secondary" title="Vista previa del recibo"><Eye className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => descargarRecibo(r)} className="rounded p-1 hover:bg-secondary" title="Descargar recibo PDF"><FileDown className="h-3.5 w-3.5" /></button>
                         <button
                           onClick={() => timbrarMut.mutate(r.id)}
                           title={s.error_message}
