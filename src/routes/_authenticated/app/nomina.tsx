@@ -382,51 +382,64 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
   }
 
 
+  async function descargarRecibo(r: any) {
+    const { generateNominaPDF } = await import("@/lib/nomina-pdf");
+    generateNominaPDF({
+      org: { razon_social: org.razon_social, rfc: org.rfc },
+      period,
+      receipts: [r],
+      output: "save",
+    });
+  }
+
   async function descargarZip() {
     const all = (data ?? []).map((r: any) => ({ r, s: stampMap.get(r.id) }));
     if (!all.length) { toast.error("No hay recibos"); return; }
     setDownloadingZip(true);
     const t = toast.loading(`Preparando ZIP (0/${all.length})…`);
+    let ok = 0;
     try {
       const { default: JSZip } = await import("jszip");
       const { generateNominaPDF } = await import("@/lib/nomina-pdf");
       const zip = new JSZip();
-      let n = 0;
       for (const { r, s } of all) {
         const safeName = [r.employee?.numero, r.employee?.nombre, r.employee?.apellido_paterno]
           .filter(Boolean).join("_").replace(/[^\w-]+/g, "_").slice(0, 80) || r.id.slice(0, 8);
         const isStamped = s?.estatus === "timbrado";
-        if (isStamped) {
-          const tasks: Array<Promise<void>> = [];
-          if (s.pdf_path) tasks.push((async () => {
-            const { base64, mime } = await dlUrl({ data: { stampId: s.id, kind: "pdf" } });
-            const bin = atob(base64);
-            const bytes = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-            zip.file(`timbrados/${safeName}.pdf`, bytes);
-          })());
-          if (s.xml_path) tasks.push((async () => {
-            const { base64, mime } = await dlUrl({ data: { stampId: s.id, kind: "xml" } });
-            const bin = atob(base64);
-            const bytes = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-            zip.file(`timbrados/${safeName}.xml`, bytes);
-          })());
-          await Promise.all(tasks);
-        } else {
-          // Genera un PDF individual (no timbrado) usando el reporte de un solo empleado
-          const pdfResult = generateNominaPDF({
-            org: { razon_social: org.razon_social, rfc: org.rfc },
-            period: period,
-            receipts: [r],
-            output: "blob",
-          });
-          if (pdfResult instanceof Blob) {
-            zip.file(`sin_timbrar/${safeName}.pdf`, pdfResult);
+        try {
+          if (isStamped) {
+            const tasks: Array<Promise<void>> = [];
+            if (s.pdf_path) tasks.push((async () => {
+              const { base64 } = await dlUrl({ data: { stampId: s.id, kind: "pdf" } });
+              const bin = atob(base64);
+              const bytes = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+              zip.file(`timbrados/${safeName}.pdf`, bytes);
+            })());
+            if (s.xml_path) tasks.push((async () => {
+              const { base64 } = await dlUrl({ data: { stampId: s.id, kind: "xml" } });
+              const bin = atob(base64);
+              const bytes = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+              zip.file(`timbrados/${safeName}.xml`, bytes);
+            })());
+            await Promise.all(tasks);
+          } else {
+            const pdfResult = generateNominaPDF({
+              org: { razon_social: org.razon_social, rfc: org.rfc },
+              period: period,
+              receipts: [r],
+              output: "blob",
+            });
+            if (pdfResult instanceof Blob) {
+              zip.file(`sin_timbrar/${safeName}.pdf`, pdfResult);
+            }
           }
+          ok++;
+        } catch (e: any) {
+          console.warn(`Error preparando recibo ${safeName}:`, e);
         }
-        n++;
-        toast.loading(`Preparando ZIP (${n}/${all.length})…`, { id: t });
+        toast.loading(`Preparando ZIP (${ok}/${all.length})…`, { id: t });
       }
       const blob = await zip.generateAsync({ type: "blob" });
       const a = document.createElement("a");
@@ -434,7 +447,7 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
       a.download = `Recibos_Nomina_${periodId.slice(0, 8)}.zip`;
       a.click();
       URL.revokeObjectURL(a.href);
-      toast.success(`ZIP listo (${n} recibos)`, { id: t });
+      toast.success(`ZIP listo (${ok} de ${all.length} recibos)`, { id: t });
     } catch (e: any) {
       toast.error(e.message ?? "Error generando ZIP", { id: t });
     } finally {
@@ -645,6 +658,9 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
                   </>
                 ) : (
                   <>
+                    <button onClick={() => descargarRecibo(r)} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary">
+                      <FileDown className="h-3 w-3"/> PDF
+                    </button>
                     <button onClick={() => timbrarMut.mutate(r.id)} disabled={timbrarMut.isPending} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary disabled:opacity-50">
                       <Stamp className="h-3.5 w-3.5"/> Timbrar
                     </button>
@@ -742,6 +758,7 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
                     ) : (
                       <div className="flex items-center justify-center gap-1.5">
                         <button onClick={() => setPreviewId(r.id)} className="rounded p-1 hover:bg-secondary" title="Vista previa del recibo"><Eye className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => descargarRecibo(r)} className="rounded p-1 hover:bg-secondary" title="Descargar recibo PDF"><FileDown className="h-3.5 w-3.5" /></button>
                       <button
                         onClick={() => timbrarMut.mutate(r.id)}
                         disabled={timbrarMut.isPending}
