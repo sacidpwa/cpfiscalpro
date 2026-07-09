@@ -6,6 +6,7 @@ import { getDashboardKpis } from "@/lib/dashboard.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, KpiCard } from "@/components/app-ui";
 import { fmtMoney } from "@/lib/format";
+import { BUILD_HASH, BUILD_TIME } from "@/lib/version";
 import { Users, FileText, TrendingUp, Wallet, Calendar, AlertCircle } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -229,6 +230,9 @@ function Dashboard() {
               </li>
             </ul>
           </div>
+        </div>
+        <div className="mt-8 text-center text-[10px] text-muted-foreground/50">
+          v{BUILD_HASH} · {BUILD_TIME.slice(0, 10)}
         </div>
       </div>
     </div>
