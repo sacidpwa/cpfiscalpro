@@ -77,7 +77,8 @@ function Nomina() {
     const t = toast.loading("Calculando nómina…");
     try {
       const res = await run({ data: { organizationId: org.id, periodId: p.id, incluirImss } });
-      toast.success(`${res.calculados} recibos · Total neto ${fmtMoney(res.totalNeto)}`, { id: t });
+      const msg = res.saltados > 0 ? ` · ${res.saltados} saltado(s)` : "";
+      toast.success(`${res.calculados} recibos${msg} · Total neto ${fmtMoney(res.totalNeto)}`, { id: t });
       qc.invalidateQueries({ queryKey: ["periods", org.id] });
       qc.invalidateQueries({ queryKey: ["receipts", p.id] });
       qc.invalidateQueries({ queryKey: ["stamps", p.id] });
@@ -376,6 +377,8 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
       qc.invalidateQueries({ queryKey: ["stamps", periodId] });
     } catch (e: any) {
       toast.error(e.message ?? "Error", { id: t, duration: 8000 });
+      qc.invalidateQueries({ queryKey: ["receipts", periodId] });
+      qc.invalidateQueries({ queryKey: ["stamps", periodId] });
     } finally {
       setRecalcing(null);
     }

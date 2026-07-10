@@ -282,12 +282,14 @@ export const runPayroll = createServerFn({ method: "POST" })
     };
     const fFalta = factorFalta[period.periodicidad as Periodicity];
 
+    let skipped = 0;
     for (const emp of emps ?? []) {
       // Siempre se asiste por defecto; solo se descuenta si hay falta o modificador explícito
       const faltas = faltasPorEmp.get(emp.id) ?? 0;
       const otrosDias = otrosDiasPorEmp.get(emp.id) ?? 0;
       const diasDescontados = Math.round((faltas * fFalta + otrosDias) * 10000) / 10000;
       const diasPagados = Math.max(0, Math.round((period.dias - diasDescontados) * 10000) / 10000);
+      if (diasPagados <= 0) { skipped++; continue; }
       const importeFalta = Math.round(Number(emp.salario_diario) * diasDescontados * 100) / 100;
 
       // INFONAVIT: cuota mensual prorrateada por periodicidad
@@ -370,7 +372,7 @@ export const runPayroll = createServerFn({ method: "POST" })
     }
 
     await supabase.from("payroll_periods").update({ estatus: "calculado" }).eq("id", period.id);
-    return { calculados: results.length, saltados: 0, totalNeto: results.reduce((s: number, r: any) => s + r.neto, 0) };
+    return { calculados: results.length, saltados: skipped, totalNeto: results.reduce((s: number, r: any) => s + r.neto, 0) };
   });
 
 export const getPeriodReceipts = createServerFn({ method: "POST" })
@@ -449,6 +451,11 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
     const fFalta = factorFalta[period.periodicidad as Periodicity];
     const diasDescontados = Math.round((faltas * fFalta + otrosDias) * 10000) / 10000;
     const diasPagados = Math.max(0, Math.round((period.dias - diasDescontados) * 10000) / 10000);
+    if (diasPagados <= 0) {
+      await supabase.from("payroll_receipt_lines").delete().eq("receipt_id", receipt.id);
+      await supabase.from("payroll_receipts").delete().eq("id", receipt.id);
+      throw new Error(`${emp.nombre} está sin días pagados (incapacidad total en el periodo). Recibo eliminado.`);
+    }
     const importeFalta = Math.round(Number(emp.salario_diario) * diasDescontados * 100) / 100;
 
     const cuotaMensualInf = Number(emp.infonavit_cuota_mensual ?? 0);
