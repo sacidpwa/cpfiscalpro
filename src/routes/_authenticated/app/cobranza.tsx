@@ -4,7 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { useOrg } from "@/lib/use-current-org";
 import { listMyBilling } from "@/lib/billing-subs.functions";
-import { Receipt, AlertCircle, CheckCircle2 } from "lucide-react";
+import { getCfdiDownloadUrl } from "@/lib/cfdi.functions";
+import { Receipt, AlertCircle, CheckCircle2, Download, Eye } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/cobranza")({
   component: MyBilling,
@@ -13,11 +15,45 @@ export const Route = createFileRoute("/_authenticated/app/cobranza")({
 function MyBilling() {
   const { current } = useOrg();
   const fn = useServerFn(listMyBilling);
+  const getUrl = useServerFn(getCfdiDownloadUrl);
   const { data } = useQuery({
     queryKey: ["my-billing", current?.id],
     queryFn: () => fn({ data: { organizationId: current!.id } }),
     enabled: !!current,
   });
+
+  async function download(stampId: string, kind: "xml" | "pdf") {
+    try {
+      const { base64, mime, filename } = await getUrl({ data: { stampId, kind } });
+      const bin = atob(base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objUrl;
+      a.download = filename;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(objUrl);
+      }, 1000);
+    } catch (e: any) { toast.error(e.message); }
+  }
+
+  async function previewPdf(stampId: string) {
+    try {
+      const { base64, mime } = await getUrl({ data: { stampId, kind: "pdf" } });
+      const bin = atob(base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      const objUrl = URL.createObjectURL(blob);
+      window.open(objUrl, "_blank");
+    } catch (e: any) { toast.error(e.message); }
+  }
 
   return (
     <div>
@@ -87,6 +123,7 @@ function MyBilling() {
                     <th className="py-1 text-right">Total</th>
                     <th className="py-1">Método</th>
                     <th className="py-1">Fecha pago</th>
+                    <th className="py-1">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -98,6 +135,23 @@ function MyBilling() {
                       <td className="py-1 text-right tabular-nums">${Number(i.monto_total).toFixed(2)}</td>
                       <td className="py-1 text-xs capitalize">{i.metodo_pago ?? "—"}</td>
                       <td className="py-1 text-xs">{i.fecha_pago ?? "—"}</td>
+                      <td className="py-1">
+                        {i.stamp ? (
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => previewPdf(i.stamp.id)} className="rounded p-1 hover:bg-secondary" title="Vista previa del recibo">
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => download(i.stamp.id, "pdf")} className="rounded p-1 hover:bg-secondary" title="PDF">
+                              <Download className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => download(i.stamp.id, "xml")} className="rounded border px-1.5 py-0.5 text-[10px] font-mono hover:bg-secondary" title="XML">
+                              XML
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

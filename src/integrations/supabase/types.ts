@@ -1738,6 +1738,7 @@ export type Database = {
           facturapi_org_id: string | null
           facturapi_test_key: string | null
           id: string
+          nomina_email_from: string | null
           nomina_email_to: string | null
           organization_id: string
           updated_at: string
@@ -1752,6 +1753,7 @@ export type Database = {
           facturapi_org_id?: string | null
           facturapi_test_key?: string | null
           id?: string
+          nomina_email_from?: string | null
           nomina_email_to?: string | null
           organization_id: string
           updated_at?: string
@@ -1766,6 +1768,7 @@ export type Database = {
           facturapi_org_id?: string | null
           facturapi_test_key?: string | null
           id?: string
+          nomina_email_from?: string | null
           nomina_email_to?: string | null
           organization_id?: string
           updated_at?: string

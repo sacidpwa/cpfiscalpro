@@ -54,7 +54,7 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
     // Leer configuración de correo desde org_billing_config
     const { data: billingRow } = await (supabaseAdmin as any)
       .from("org_billing_config")
-      .select("nomina_email_to")
+      .select("nomina_email_from, nomina_email_to")
       .eq("organization_id", period.organization_id)
       .maybeSingle();
     const dbSummaryTo: string[] = (billingRow?.nomina_email_to ?? "")
@@ -82,7 +82,8 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
       if (!stampByRef.has(s.reference_id)) stampByRef.set(s.reference_id, s);
     }
 
-    const fromEmail = data.fromEmail || defaults?.fromEmail || "onboarding@resend.dev";
+    const dbFromEmail = billingRow?.nomina_email_from || undefined;
+    const fromEmail = data.fromEmail || dbFromEmail || defaults?.fromEmail || "onboarding@resend.dev";
     const orgName = org?.nombre_comercial || org?.razon_social || "Nómina";
     const fromHeader = `${orgName} <${fromEmail}>`;
     const subject = `${data.subjectPrefix || "Recibo de nómina"} · Periodo ${period.numero}/${period.ejercicio}`;
@@ -343,7 +344,14 @@ export const emailStampedComplement = createServerFn({ method: "POST" })
 
     const orgKey = (org?.razon_social || "").toUpperCase().trim();
     const defaults = ORG_EMAIL_DEFAULTS[orgKey];
-    const fromEmail = defaults?.fromEmail || "facturacion@sacid.site";
+
+    const { data: billingRow } = await (supabaseAdmin as any)
+      .from("org_billing_config")
+      .select("nomina_email_from")
+      .eq("organization_id", stamp.organization_id)
+      .maybeSingle();
+    const dbFromEmail = billingRow?.nomina_email_from || undefined;
+    const fromEmail = dbFromEmail || defaults?.fromEmail || "facturacion@sacid.site";
     const orgName = org?.nombre_comercial || org?.razon_social || "Facturación";
     const fromHeader = `${orgName} <${fromEmail}>`;
 
@@ -440,7 +448,14 @@ export const emailStampedBatch = createServerFn({ method: "POST" })
 
     const orgKey = (org?.razon_social || "").toUpperCase().trim();
     const defaults = ORG_EMAIL_DEFAULTS[orgKey];
-    const fromEmail = defaults?.fromEmail || "facturacion@sacid.site";
+
+    const { data: billingRow } = await (supabaseAdmin as any)
+      .from("org_billing_config")
+      .select("nomina_email_from")
+      .eq("organization_id", orgId)
+      .maybeSingle();
+    const dbFromEmail = billingRow?.nomina_email_from || undefined;
+    const fromEmail = dbFromEmail || defaults?.fromEmail || "facturacion@sacid.site";
     const orgName = org?.nombre_comercial || org?.razon_social || "Facturación";
     const fromHeader = `${orgName} <${fromEmail}>`;
 
@@ -544,7 +559,14 @@ export const emailSinglePayrollReceipt = createServerFn({ method: "POST" })
 
     const orgKey = (org?.razon_social || "").toUpperCase().trim();
     const defaults = ORG_EMAIL_DEFAULTS[orgKey];
-    const fromEmail = defaults?.fromEmail || "onboarding@resend.dev";
+
+    const { data: billingRow } = await (supabaseAdmin as any)
+      .from("org_billing_config")
+      .select("nomina_email_from")
+      .eq("organization_id", receipt.organization_id)
+      .maybeSingle();
+    const dbFromEmail = billingRow?.nomina_email_from || undefined;
+    const fromEmail = dbFromEmail || defaults?.fromEmail || "onboarding@resend.dev";
     const orgName = org?.nombre_comercial || org?.razon_social || "Nómina";
     const fromHeader = `${orgName} <${fromEmail}>`;
 

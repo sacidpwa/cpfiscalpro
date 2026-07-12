@@ -11,7 +11,7 @@ import { searchSatProducts, searchSatUnits } from "@/lib/sat-catalogs.functions"
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { fmtMoney } from "@/lib/format";
-import { FileText, Plus, X, Download, Trash2, Loader2, Receipt, RefreshCw, Search, Mail } from "lucide-react";
+import { FileText, Plus, X, Download, Trash2, Loader2, Receipt, RefreshCw, Search, Mail, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 
@@ -118,6 +118,17 @@ function Facturas() {
         document.body.removeChild(a);
         URL.revokeObjectURL(objUrl);
       }, 1000);
+    } catch (e: any) { toast.error(e.message); }
+  }
+  async function previewPdf(stampId: string) {
+    try {
+      const { base64, mime } = await getUrl({ data: { stampId, kind: "pdf" } });
+      const bin = atob(base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      const objUrl = URL.createObjectURL(blob);
+      window.open(objUrl, "_blank");
     } catch (e: any) { toast.error(e.message); }
   }
   async function doCancel(stampId: string) {
@@ -324,6 +335,7 @@ function Facturas() {
                     <td className="px-3 py-2 text-right">
                       <div className="flex justify-end gap-1">
                         {s.estatus === "timbrado" && <button onClick={() => sendByEmail(s)} title="Enviar por correo" className="rounded p-1 hover:bg-secondary"><Mail className="h-3.5 w-3.5" /></button>}
+                        {s.pdf_path && <button onClick={() => previewPdf(s.id)} title="Vista previa" className="rounded p-1 hover:bg-secondary"><Eye className="h-3.5 w-3.5" /></button>}
                         {s.pdf_path && <button onClick={() => download(s.id, "pdf")} title="PDF" className="rounded p-1 hover:bg-secondary"><Download className="h-3.5 w-3.5" /></button>}
                         {s.xml_path && <button onClick={() => download(s.id, "xml")} title="XML" className="rounded px-1.5 py-0.5 text-[10px] font-mono hover:bg-secondary">XML</button>}
                         {s.estatus === "timbrado" && (s.payload?.request?.payment_method ?? s.payload?.response?.payment_method) === "PPD" && (

@@ -8,6 +8,7 @@ const UpsertSchema = z.object({
   facturapi_test_key: z.string().trim().max(200).optional().nullable(),
   facturapi_live_key: z.string().trim().max(200).optional().nullable(),
   environment: z.enum(["test", "live"]).optional(),
+  nomina_email_from: z.string().trim().max(200).optional().nullable(),
   nomina_email_to: z.string().trim().max(500).optional().nullable(),
 });
 
@@ -48,6 +49,7 @@ export const getBillingConfig = createServerFn({ method: "POST" })
         live: { last4: "", set: false },
         csd_uploaded_at: null as string | null,
         csd_expires_at: null as string | null,
+        nomina_email_from: null as string | null,
         nomina_email_to: null as string | null,
         updated_at: null as string | null,
       };
@@ -60,6 +62,7 @@ export const getBillingConfig = createServerFn({ method: "POST" })
       live: mask(row.facturapi_live_key),
       csd_uploaded_at: row.csd_uploaded_at,
       csd_expires_at: row.csd_expires_at,
+      nomina_email_from: row.nomina_email_from,
       nomina_email_to: row.nomina_email_to,
       updated_at: row.updated_at,
     };
@@ -82,6 +85,7 @@ export const upsertBillingConfig = createServerFn({ method: "POST" })
     // Solo escribimos las llaves si vienen no vacías (evita borrar al editar parcialmente)
     if (data.facturapi_test_key) patch.facturapi_test_key = data.facturapi_test_key;
     if (data.facturapi_live_key) patch.facturapi_live_key = data.facturapi_live_key;
+    if (data.nomina_email_from !== undefined) patch.nomina_email_from = data.nomina_email_from;
     if (data.nomina_email_to !== undefined) patch.nomina_email_to = data.nomina_email_to;
 
     const { error } = await supabaseAdmin

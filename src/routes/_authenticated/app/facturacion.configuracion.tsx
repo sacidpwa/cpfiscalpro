@@ -40,12 +40,14 @@ function FacturacionConfig() {
   const [environment, setEnvironment] = useState<"test" | "live">("test");
   const [facturapiOrgId, setFacturapiOrgId] = useState("");
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [nominaEmailFrom, setNominaEmailFrom] = useState("");
   const [nominaEmailTo, setNominaEmailTo] = useState("");
 
   // Sync defaults when data loads
   if (data && environment !== data.environment && testKey === "" && liveKey === "" && !facturapiOrgId && !nominaEmailTo) {
     setEnvironment(data.environment);
     setFacturapiOrgId(data.facturapi_org_id ?? "");
+    setNominaEmailFrom(data.nomina_email_from ?? "");
     setNominaEmailTo(data.nomina_email_to ?? "");
   }
 
@@ -58,6 +60,7 @@ function FacturacionConfig() {
           facturapi_org_id: facturapiOrgId || null,
           facturapi_test_key: testKey || null,
           facturapi_live_key: liveKey || null,
+          nomina_email_from: nominaEmailFrom || null,
           nomina_email_to: nominaEmailTo || null,
         },
       }),
@@ -243,7 +246,18 @@ function FacturacionConfig() {
             <p className="mt-1 text-xs text-muted-foreground">
               Al enviar recibos de nómina, el sistema enviará un resumen del periodo con todos los CFDI adjuntos a esta dirección.
             </p>
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
+              <Field label="Correo remitente" hint={data?.nomina_email_from ? "Configurado" : "Usa default del sistema"}>
+                <input
+                  value={nominaEmailFrom}
+                  onChange={(e) => setNominaEmailFrom(e.target.value)}
+                  placeholder="ferrariautopartes@sacid.site"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Dirección desde la que se envían los correos de nómina. Debe ser un dominio verificado en Resend.
+                </p>
+              </Field>
               <Field label="Destinatarios del resumen" hint={data?.nomina_email_to ? "Configurado" : "Usa defaults hardcodeados"}>
                 <input
                   value={nominaEmailTo}
