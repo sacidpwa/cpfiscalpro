@@ -51,6 +51,17 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
     const orgKey = (org?.razon_social || "").toUpperCase().trim();
     const defaults = ORG_EMAIL_DEFAULTS[orgKey];
 
+    // Leer configuración de correo desde org_billing_config
+    const { data: billingRow } = await (supabaseAdmin as any)
+      .from("org_billing_config")
+      .select("nomina_email_to")
+      .eq("organization_id", period.organization_id)
+      .maybeSingle();
+    const dbSummaryTo: string[] = (billingRow?.nomina_email_to ?? "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+
     const { data: receipts } = await (supabaseAdmin as any)
       .from("payroll_receipts")
       .select("id, employee:employees(id, nombre, apellido_paterno, apellido_materno, email, numero, rfc)")
@@ -141,9 +152,13 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
     }
 
     // 2) Correo resumen con todos los CFDI a contabilidad
+    // Prioriza la configuración guardada en org_billing_config.nomina_email_to;
+    // si no hay, usa los defaults hardcodeados.
+    const summaryTo = dbSummaryTo.length ? dbSummaryTo : (defaults?.summaryTo ?? []);
+    const summaryCc = dbSummaryTo.length ? [] : (defaults?.summaryCc ?? []);
     let summarySent = false;
     let summaryError: string | undefined;
-    if (defaults && (defaults.summaryTo.length || defaults.summaryCc.length)) {
+    if (summaryTo.length) {
       try {
         const allAttachments: Array<{ filename: string; content: string }> = [];
 
@@ -191,10 +206,13 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
             </table>`
           : `<p style="font-size:13px;color:#16a34a;margin:8px 0 0">Todos los empleados cuentan con correo registrado.</p>`;
 
+        const logoUrl = defaults?.logoUrl ?? "";
+        const signature = defaults?.signature ?? orgName;
+
         const html = `
           <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:640px;margin:0 auto;padding:24px">
             <div style="text-align:center;margin-bottom:16px">
-              <img src="${defaults.logoUrl}" alt="${defaults.signature}" style="max-width:180px;height:auto"/>
+              <img src="${logoUrl}" alt="${signature}" style="max-width:180px;height:auto"/>
             </div>
             <h2 style="margin:0 0 12px">Resumen de nómina · Periodo ${period.numero}/${period.ejercicio}</h2>
             <p style="margin:0 0 6px"><strong>${orgName}</strong> · RFC ${org?.rfc ?? ""}</p>
@@ -216,7 +234,7 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
             </p>
             <p style="margin-top:24px;font-size:13px;color:#555">
               Atentamente,<br/>
-              <strong>${defaults.signature}</strong>
+              <strong>${signature}</strong>
             </p>
           </div>`;
 
@@ -225,8 +243,8 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
           body: JSON.stringify({
             from: fromHeader,
-            to: defaults.summaryTo,
-            cc: defaults.summaryCc,
+            to: summaryTo,
+            cc: summaryCc,
             subject: `Resumen Nómina ${orgName} · Periodo ${period.numero}/${period.ejercicio}`,
             html,
             attachments: allAttachments,
@@ -249,8 +267,8 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
         payroll_period_id: period.id,
         sent_by: context.userId,
         from_email: fromEmail,
-        summary_to: defaults?.summaryTo ?? [],
-        summary_cc: defaults?.summaryCc ?? [],
+        summary_to: summaryTo,
+        summary_cc: summaryCc,
         total_recipients: (receipts ?? []).length,
         total_sent: sent,
         total_skipped: skipped,

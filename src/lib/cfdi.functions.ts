@@ -325,6 +325,15 @@ async function stampPayrollReceiptInternal({
       throw new Error(`El RFC del empleado debe tener 13 caracteres (persona física). Actual: "${rfcReceptor}" (${rfcReceptor.length}).`);
     }
 
+    // Obtener CURP del emisor desde FacturAPI (necesario para persona física)
+    let emisorCurp: string | undefined;
+    try {
+      const fapiOrg = await callFacturapi(key, "/organizations/me");
+      emisorCurp = fapiOrg?.legal?.curp || undefined;
+    } catch {
+      // Si falla la consulta, se envía sin CURP (puede fallar si el emisor es persona física)
+    }
+
     const payload: any = {
       type: "N",
       customer: {
@@ -348,6 +357,7 @@ async function stampPayrollReceiptInternal({
             num_dias_pagados: Number(receipt.dias_pagados || period.dias),
             emisor: {
               registro_patronal: (org as any).registro_patronal || "C6767873105",
+              ...(emisorCurp ? { curp: emisorCurp } : {}),
             },
             receptor: {
               curp: emp.curp,
@@ -929,6 +939,32 @@ export const cancelFacturapiInvoice = createServerFn({ method: "POST" })
       })
       .eq("facturapi_id", data.facturapiId);
     return { ok: true, status: parsed?.status ?? "canceled" };
+  });
+
+// Diagnóstico: muestra la configuración actual del emisor en FacturAPI
+export const getFacturapiOrgInfo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ organization_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: isMember } = await supabase.rpc("is_org_member", { _org: data.organization_id, _user: userId });
+    if (!isMember) throw new Error("Sin acceso");
+
+    const { key } = await getApiKey(data.organization_id);
+    const orgData = await callFacturapi(key, "/organizations/me");
+
+    return {
+      legal_name: orgData.legal_name,
+      tax_id: orgData.tax_id,
+      curp: orgData.curp ?? null,
+      tax_system: orgData.tax_system,
+      email: orgData.email ?? null,
+      address: orgData.address ?? null,
+      certificates: orgData.certificates?.length ?? 0,
+      livemode: orgData.livemode,
+    };
   });
 
 

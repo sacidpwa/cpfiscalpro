@@ -13,7 +13,7 @@ import { checkPlatformAdmin } from "@/lib/admin.functions";
 import { updateOrgLogo } from "@/lib/orgs.functions";
 import { listVehicles, upsertVehicle, deleteVehicle, listOperators, upsertOperator, deleteOperator } from "@/lib/complements.functions";
 import { toast } from "sonner";
-import { CheckCircle2, AlertCircle, KeyRound, Loader2, ExternalLink, Lock, Image as ImageIcon, Upload, Trash2, Truck, UserCircle2, Plus, X } from "lucide-react";
+import { CheckCircle2, AlertCircle, KeyRound, Loader2, ExternalLink, Lock, Mail, Image as ImageIcon, Upload, Trash2, Truck, UserCircle2, Plus, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/facturacion/configuracion")({
   component: FacturacionConfig,
@@ -40,11 +40,13 @@ function FacturacionConfig() {
   const [environment, setEnvironment] = useState<"test" | "live">("test");
   const [facturapiOrgId, setFacturapiOrgId] = useState("");
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [nominaEmailTo, setNominaEmailTo] = useState("");
 
   // Sync defaults when data loads
-  if (data && environment !== data.environment && testKey === "" && liveKey === "" && !facturapiOrgId) {
+  if (data && environment !== data.environment && testKey === "" && liveKey === "" && !facturapiOrgId && !nominaEmailTo) {
     setEnvironment(data.environment);
     setFacturapiOrgId(data.facturapi_org_id ?? "");
+    setNominaEmailTo(data.nomina_email_to ?? "");
   }
 
   const saveMut = useMutation({
@@ -56,6 +58,7 @@ function FacturacionConfig() {
           facturapi_org_id: facturapiOrgId || null,
           facturapi_test_key: testKey || null,
           facturapi_live_key: liveKey || null,
+          nomina_email_to: nominaEmailTo || null,
         },
       }),
     onSuccess: () => {
@@ -230,6 +233,29 @@ function FacturacionConfig() {
                 </div>
               </div>
             )}
+          </section>
+
+          <section className="rounded-lg border bg-card p-6">
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Correo de nómina</h3>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Al enviar recibos de nómina, el sistema enviará un resumen del periodo con todos los CFDI adjuntos a esta dirección.
+            </p>
+            <div className="mt-4">
+              <Field label="Destinatarios del resumen" hint={data?.nomina_email_to ? "Configurado" : "Usa defaults hardcodeados"}>
+                <input
+                  value={nominaEmailTo}
+                  onChange={(e) => setNominaEmailTo(e.target.value)}
+                  placeholder="contabilidad@ejemplo.com, director@ejemplo.com"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Separa varios correos con coma. Si se deja vacío se usa la configuración por defecto del sistema.
+                </p>
+              </Field>
+            </div>
           </section>
         </div>
 
