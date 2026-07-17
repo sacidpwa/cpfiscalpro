@@ -5,11 +5,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const RESEND_API = "https://api.resend.com";
 
 // Configuración por organización (RFC/razón social → defaults)
-const ORG_EMAIL_DEFAULTS: Record<string, { fromEmail: string; summaryTo: string[]; summaryCc: string[]; signature: string; logoUrl: string }> = {
+const ORG_EMAIL_DEFAULTS: Record<string, { fromEmail: string; summaryTo: string[]; summaryCc: string[]; summarySubject?: string; signature: string; logoUrl: string }> = {
   "HELIX PROTEINAS SA DE CV": {
     fromEmail: "helixgestion@sacid.site",
-    summaryTo: ["labra_laross@hotmail.com"],
-    summaryCc: ["helixproteinas@gmail.com"],
+    summaryTo: ["labra_laross@hotmail.com", "helixproteinas@gmail.com"],
+    summaryCc: [],
+    summarySubject: "Resumen del periodo {numero}",
     signature: "SACID",
     logoUrl: "https://conta-nexus-mexico.lovable.app/__l5e/assets-v1/0d4fb48b-32f8-40e7-97ff-665a663bf28b/sacid-logo.png",
   },
@@ -239,6 +240,10 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
             </p>
           </div>`;
 
+        const summarySubject = (defaults?.summarySubject || `Resumen Nómina ${orgName} · Periodo ${period.numero}/${period.ejercicio}`)
+          .replace(/{numero}/g, period.numero)
+          .replace(/{ejercicio}/g, period.ejercicio)
+          .replace(/{orgName}/g, orgName);
         const res = await fetch(`${RESEND_API}/emails`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
@@ -246,7 +251,7 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
             from: fromHeader,
             to: summaryTo,
             cc: summaryCc,
-            subject: `Resumen Nómina ${orgName} · Periodo ${period.numero}/${period.ejercicio}`,
+            subject: summarySubject,
             html,
             attachments: allAttachments,
           }),
