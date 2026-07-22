@@ -117,6 +117,7 @@ function AdminFilings() {
                   <td className="px-3 py-2 text-right">
                     <div className="flex justify-end gap-1">
                       {r.acuse_path && <FileLink path={r.acuse_path} label="Acuse" />}
+                      {r.acuse_pago_path && <FileLink path={r.acuse_pago_path} label="Acuse pago" />}
                       {r.acuse_iva_path && <FileLink path={r.acuse_iva_path} label="Acuse IVA" />}
                       {r.acuse_isr_path && <FileLink path={r.acuse_isr_path} label="Acuse ISR" />}
                       <button
