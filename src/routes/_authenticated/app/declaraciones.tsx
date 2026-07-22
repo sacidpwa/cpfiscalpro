@@ -94,9 +94,13 @@ function ClientFilings() {
                         ${Number(r.monto_pagar).toFixed(2)}
                       </td>
                       <td className="px-3 py-2 font-mono text-[10px]">{r.linea_captura ?? "—"}</td>
-                      <td className="px-3 py-2 text-right">
-                        {r.acuse_path && <FileLink path={r.acuse_path} />}
-                      </td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="flex justify-end gap-1">
+                      {r.acuse_path && <FileLink path={r.acuse_path} label="Acuse" />}
+                      {r.acuse_iva_path && <FileLink path={r.acuse_iva_path} label="Acuse IVA" />}
+                      {r.acuse_isr_path && <FileLink path={r.acuse_isr_path} label="Acuse ISR" />}
+                    </div>
+                  </td>
                     </tr>
                   );
                 })}
@@ -122,7 +126,7 @@ function Status({ value, vencida }: { value: string; vencida: boolean }) {
   return <span className={`rounded px-2 py-0.5 ${map[value] ?? ""}`}>{value.replace("_", " ")}</span>;
 }
 
-function FileLink({ path }: { path: string }) {
+function FileLink({ path, label }: { path: string; label?: string }) {
   const fn = useServerFn(getFilingFileUrl);
   return (
     <button
@@ -136,7 +140,7 @@ function FileLink({ path }: { path: string }) {
       }}
       className="rounded border px-2 py-1 text-xs hover:bg-secondary"
     >
-      <Download className="inline h-3 w-3" /> Descargar
+      <Download className="inline h-3 w-3" /> {label ?? "Descargar"}
     </button>
   );
 }

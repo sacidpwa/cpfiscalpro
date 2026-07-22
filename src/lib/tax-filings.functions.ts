@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const TYPES = [
   "isr_mensual",
   "iva_mensual",
+  "iva_isr_mensual",
   "diot",
   "isr_anual",
   "retenciones_sueldos",
@@ -16,6 +17,7 @@ const STATUS = ["pendiente", "en_revision", "presentada", "con_observaciones"] a
 export const TAX_LABELS: Record<(typeof TYPES)[number], string> = {
   isr_mensual: "ISR mensual",
   iva_mensual: "IVA mensual",
+  iva_isr_mensual: "IVA + ISR mensual",
   diot: "DIOT",
   isr_anual: "ISR anual",
   retenciones_sueldos: "Retenciones por sueldos",
@@ -106,6 +108,8 @@ export const adminUpsertFiling = createServerFn({ method: "POST" })
         linea_captura: z.string().max(100).nullable().optional(),
         acuse_path: z.string().nullable().optional(),
         acuse_pago_path: z.string().nullable().optional(),
+        acuse_iva_path: z.string().nullable().optional(),
+        acuse_isr_path: z.string().nullable().optional(),
         notas: z.string().max(500).nullable().optional(),
       })
       .parse(i),
@@ -126,6 +130,8 @@ export const adminUpsertFiling = createServerFn({ method: "POST" })
       linea_captura: data.linea_captura ?? null,
       acuse_path: data.acuse_path ?? null,
       acuse_pago_path: data.acuse_pago_path ?? null,
+      acuse_iva_path: data.acuse_iva_path ?? null,
+      acuse_isr_path: data.acuse_isr_path ?? null,
       notas: data.notas ?? null,
       uploaded_by: context.userId,
     };
