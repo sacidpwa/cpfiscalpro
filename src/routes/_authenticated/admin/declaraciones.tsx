@@ -120,6 +120,7 @@ function AdminFilings() {
                       {r.acuse_pago_path && <FileLink path={r.acuse_pago_path} label="Acuse pago" />}
                       {r.acuse_iva_path && <FileLink path={r.acuse_iva_path} label="Acuse IVA" />}
                       {r.acuse_isr_path && <FileLink path={r.acuse_isr_path} label="Acuse ISR" />}
+                      {r.declaracion_path && <FileLink path={r.declaracion_path} label="Declaración" />}
                       <button
                         onClick={() => setEditing(r)}
                         className="rounded border px-2 py-1 text-xs hover:bg-secondary"
@@ -217,6 +218,7 @@ function FilingDialog({
     acuse_path: row.acuse_path ?? "",
     acuse_iva_path: row.acuse_iva_path ?? "",
     acuse_isr_path: row.acuse_isr_path ?? "",
+    declaracion_path: row.declaracion_path ?? "",
     notas: row.notas ?? "",
   });
   const [uploading, setUploading] = useState(false);
@@ -286,6 +288,30 @@ function FilingDialog({
       });
       setF({ ...f, acuse_isr_path: r.path });
       toast.success("Acuse ISR subido");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleFileDeclaracion(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const r = await upload({
+        data: {
+          organizationId: f.organizationId,
+          filename: file.name,
+          contentType: file.type || "application/pdf",
+          base64,
+        },
+      });
+      setF({ ...f, declaracion_path: r.path });
+      toast.success("Declaración subida");
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -381,6 +407,9 @@ function FilingDialog({
                 <span className="mt-2 mb-1 block">Acuse ISR</span>
                 <input type="file" accept="application/pdf,image/*" onChange={handleFileIsr} className="block w-full text-xs" />
                 {f.acuse_isr_path && <span className="mt-1 block break-all text-[10px] text-muted-foreground">{f.acuse_isr_path}</span>}
+                <span className="mt-2 mb-1 block">Declaración</span>
+                <input type="file" accept="application/pdf,image/*" onChange={handleFileDeclaracion} className="block w-full text-xs" />
+                {f.declaracion_path && <span className="mt-1 block break-all text-[10px] text-muted-foreground">{f.declaracion_path}</span>}
               </>
             ) : (
               <>
@@ -406,6 +435,7 @@ function FilingDialog({
                 acuse_path: f.acuse_path || null,
                 acuse_iva_path: f.acuse_iva_path || null,
                 acuse_isr_path: f.acuse_isr_path || null,
+                declaracion_path: f.declaracion_path || null,
                 notas: f.notas || null,
               })
             }

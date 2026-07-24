@@ -110,6 +110,7 @@ export const adminUpsertFiling = createServerFn({ method: "POST" })
         acuse_pago_path: z.string().nullable().optional(),
         acuse_iva_path: z.string().nullable().optional(),
         acuse_isr_path: z.string().nullable().optional(),
+        declaracion_path: z.string().nullable().optional(),
         notas: z.string().max(500).nullable().optional(),
       })
       .parse(i),
@@ -132,6 +133,7 @@ export const adminUpsertFiling = createServerFn({ method: "POST" })
       acuse_pago_path: data.acuse_pago_path ?? null,
       acuse_iva_path: data.acuse_iva_path ?? null,
       acuse_isr_path: data.acuse_isr_path ?? null,
+      declaracion_path: data.declaracion_path ?? null,
       notas: data.notas ?? null,
       uploaded_by: context.userId,
     };
