@@ -93,6 +93,7 @@ function AdminFilings() {
                 <th className="px-3 py-2">Fecha límite</th>
                 <th className="px-3 py-2 text-right">Monto</th>
                 <th className="px-3 py-2 text-right">Acuse</th>
+                <th className="px-3 py-2 text-right">Declaración</th>
               </tr>
             </thead>
             <tbody>
@@ -120,14 +121,20 @@ function AdminFilings() {
                       {r.acuse_pago_path && <FileLink path={r.acuse_pago_path} label="Acuse pago" />}
                       {r.acuse_iva_path && <FileLink path={r.acuse_iva_path} label="Acuse IVA" />}
                       {r.acuse_isr_path && <FileLink path={r.acuse_isr_path} label="Acuse ISR" />}
-                      {r.declaracion_path && <FileLink path={r.declaracion_path} label="Declaración" />}
-                      <button
-                        onClick={() => setEditing(r)}
-                        className="rounded border px-2 py-1 text-xs hover:bg-secondary"
-                      >
-                        Editar
-                      </button>
                     </div>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="flex justify-end gap-1">
+                      {r.declaracion_path && <FileLink path={r.declaracion_path} label="Declaración" />}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      onClick={() => setEditing(r)}
+                      className="rounded border px-2 py-1 text-xs hover:bg-secondary"
+                    >
+                      Editar
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -229,7 +236,12 @@ function FilingDialog({
     setUploading(true);
     try {
       const buf = await file.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const bytes = new Uint8Array(buf);
+      const chunks: string[] = [];
+      for (let i = 0; i < bytes.length; i += 8192) {
+        chunks.push(String.fromCharCode(...bytes.subarray(i, i + 8192)));
+      }
+      const base64 = btoa(chunks.join(""));
       const r = await upload({
         data: {
           organizationId: f.organizationId,
@@ -253,7 +265,12 @@ function FilingDialog({
     setUploading(true);
     try {
       const buf = await file.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const bytes = new Uint8Array(buf);
+      const chunks: string[] = [];
+      for (let i = 0; i < bytes.length; i += 8192) {
+        chunks.push(String.fromCharCode(...bytes.subarray(i, i + 8192)));
+      }
+      const base64 = btoa(chunks.join(""));
       const r = await upload({
         data: {
           organizationId: f.organizationId,
@@ -277,7 +294,12 @@ function FilingDialog({
     setUploading(true);
     try {
       const buf = await file.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const bytes = new Uint8Array(buf);
+      const chunks: string[] = [];
+      for (let i = 0; i < bytes.length; i += 8192) {
+        chunks.push(String.fromCharCode(...bytes.subarray(i, i + 8192)));
+      }
+      const base64 = btoa(chunks.join(""));
       const r = await upload({
         data: {
           organizationId: f.organizationId,
@@ -301,7 +323,12 @@ function FilingDialog({
     setUploading(true);
     try {
       const buf = await file.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const bytes = new Uint8Array(buf);
+      const chunks: string[] = [];
+      for (let i = 0; i < bytes.length; i += 8192) {
+        chunks.push(String.fromCharCode(...bytes.subarray(i, i + 8192)));
+      }
+      const base64 = btoa(chunks.join(""));
       const r = await upload({
         data: {
           organizationId: f.organizationId,

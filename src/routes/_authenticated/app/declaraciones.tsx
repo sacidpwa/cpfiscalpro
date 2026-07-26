@@ -73,6 +73,7 @@ function ClientFilings() {
                   <th className="px-3 py-2 text-right">Monto pagado</th>
                   <th className="px-3 py-2">Línea de captura</th>
                   <th className="px-3 py-2 text-right">Acuse</th>
+                  <th className="px-3 py-2 text-right">Declaración</th>
                 </tr>
               </thead>
               <tbody>
@@ -100,8 +101,10 @@ function ClientFilings() {
                           {r.acuse_pago_path && <FileLink path={r.acuse_pago_path} label="Acuse pago" />}
                           {r.acuse_iva_path && <FileLink path={r.acuse_iva_path} label="Acuse IVA" />}
                           {r.acuse_isr_path && <FileLink path={r.acuse_isr_path} label="Acuse ISR" />}
-                          {r.declaracion_path && <FileLink path={r.declaracion_path} label="Declaración" />}
                         </div>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {r.declaracion_path && <FileLink path={r.declaracion_path} label="Declaración" />}
                       </td>
                     </tr>
                   );
