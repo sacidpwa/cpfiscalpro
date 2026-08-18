@@ -41,7 +41,7 @@ const upsertSchema = z.object({
   clabe: z.string().optional(),
   email: z.string().optional().nullable(),
   telefono: z.string().optional().nullable(),
-  estatus: z.enum(["activo", "baja", "suspendido"]).default("activo"),
+  estatus: z.enum(["activo", "baja", "suspendido", "renuncia"]).default("activo"),
   cp_fiscal: z.string().optional().nullable(),
   regimen_fiscal_receptor: z.string().optional().nullable(),
   tipo_regimen: z.string().optional().nullable(),
@@ -530,6 +530,273 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
     return { ok: true, neto: netoPagar, faltas, diasPagados };
   });
 
+// ============ PAYROLL PERSONAL (recibo individualizado para empleado dado de baja) ============
+
+const personalReceiptSchema = z.object({
+  organizationId: z.string().uuid(),
+  employeeId: z.string().uuid(),
+  salarioDiario: z.number().min(0),
+  diasPagados: z.number().min(0).max(31),
+  periodicidad: z.enum(["quincenal", "mensual"]),
+  percepciones: z.array(z.object({
+    clave: z.string().min(1),
+    descripcion: z.string().optional(),
+    importe_gravado: z.number().min(0),
+    importe_exento: z.number().min(0),
+  })).default([]),
+  deducciones: z.array(z.object({
+    clave: z.string().min(1),
+    descripcion: z.string().optional(),
+    importe: z.number().min(0),
+  })).default([]),
+  incluirImss: z.boolean().optional().default(true),
+  timbrar: z.boolean().optional().default(false),
+  esLiquidacion: z.boolean().optional().default(false),
+});
+
+export const runPayrollPersonal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => personalReceiptSchema.parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { organizationId, employeeId, salarioDiario, diasPagados, periodicidad, percepciones, deducciones, incluirImss, timbrar, esLiquidacion } = data;
+
+    const ejercicio = new Date().getFullYear();
+
+    // Cargar empleado
+    const { data: emp, error: empErr } = await supabase
+      .from("employees")
+      .select("*")
+      .eq("id", employeeId)
+      .eq("organization_id", organizationId)
+      .single();
+    if (empErr || !emp) throw new Error(empErr?.message ?? "Empleado no encontrado");
+
+    // Calcular totales según el tipo de recibo
+    let totalGravado: number;
+    let totalExento: number;
+    let totalPercepciones: number;
+    let isr: number;
+    let subsidio: number;
+    let imssObrero: number;
+    let totalDeducciones: number;
+    let neto: number;
+
+    if (esLiquidacion) {
+      // Para liquidación: los totales vienen directo de las percepciones del usuario
+      totalGravado = percepciones.reduce((s, p) => s + p.importe_gravado, 0);
+      totalExento = percepciones.reduce((s, p) => s + p.importe_exento, 0);
+      totalPercepciones = totalGravado + totalExento;
+      // En liquidación con percepciones exentas Art. 93 LISR, ISR = 0
+      isr = 0;
+      subsidio = 0;
+      imssObrero = 0;
+      const deduccionesExtraTotal = deducciones.reduce((s, d) => s + d.importe, 0);
+      totalDeducciones = deduccionesExtraTotal;
+      neto = totalPercepciones - totalDeducciones;
+    } else {
+      // Para recibo normal: usar calcPayroll
+      const tables = await loadTables(supabase, ejercicio);
+      const percepcionesExtra = percepciones.map(p => ({
+        gravado: p.importe_gravado,
+        exento: p.importe_exento,
+      }));
+      const deduccionesExtra = deducciones.map(d => ({
+        importe: d.importe,
+      }));
+      const sdi = emp.sdi ? Number(emp.sdi) : calcSDI(salarioDiario);
+      const result = calcPayroll(
+        {
+          salarioDiario,
+          sdi,
+          diasPagados,
+          periodicidad: periodicidad as Periodicity,
+          percepcionesExtra: percepcionesExtra.length ? percepcionesExtra : undefined,
+          deduccionesExtra: deduccionesExtra.length ? deduccionesExtra : undefined,
+        },
+        tables,
+      );
+      totalGravado = result.total_gravado;
+      totalExento = result.total_exento;
+      totalPercepciones = result.total_percepciones;
+      isr = result.isr;
+      subsidio = result.subsidio;
+      imssObrero = incluirImss ? result.imss_obrero : 0;
+      totalDeducciones = result.total_deducciones;
+      neto = incluirImss ? result.neto : Math.round((result.neto + result.imss_obrero) * 100) / 100;
+    }
+
+    // Crear periodo "personal" para este recibo
+    const now = new Date();
+    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const fechaInicio = localDate;
+    const fechaFin = localDate;
+    const fechaPago = localDate;
+
+    // Buscar o crear periodo personal (numero 99999)
+    let periodNum = 99999;
+    const { data: existingPeriod } = await supabase
+      .from("payroll_periods")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("ejercicio", ejercicio)
+      .eq("numero", periodNum)
+      .maybeSingle();
+
+    let periodId: string;
+    if (existingPeriod) {
+      periodId = existingPeriod.id;
+      // Actualizar fechas del periodo personal a hoy (hora local)
+      await supabase
+        .from("payroll_periods")
+        .update({ fecha_inicio: fechaInicio, fecha_fin: fechaFin, fecha_pago: fechaPago })
+        .eq("id", periodId);
+      // Borrar recibo previo del mismo empleado en este periodo personal (permite regenerar)
+      const { data: prevReceipt } = await supabase
+        .from("payroll_receipts")
+        .select("id")
+        .eq("payroll_period_id", periodId)
+        .eq("employee_id", employeeId)
+        .maybeSingle();
+      if (prevReceipt) {
+        await supabase.from("payroll_receipt_lines").delete().eq("receipt_id", prevReceipt.id);
+        await supabase.from("payroll_receipts").delete().eq("id", prevReceipt.id);
+      }
+    } else {
+      const { data: newPeriod, error: periodErr } = await supabase
+        .from("payroll_periods")
+        .insert({
+          organization_id: organizationId,
+          ejercicio,
+          numero: periodNum,
+          periodicidad,
+          fecha_inicio: fechaInicio,
+          fecha_fin: fechaFin,
+          fecha_pago: fechaPago,
+          dias: diasPagados,
+          estatus: "calculado",
+        })
+        .select("id")
+        .single();
+      if (periodErr) throw new Error(periodErr.message);
+      periodId = newPeriod.id;
+    }
+
+    // Crear recibo
+    const { data: receipt, error: re } = await supabase
+      .from("payroll_receipts")
+      .insert({
+        organization_id: organizationId,
+        payroll_period_id: periodId,
+        employee_id: employeeId,
+        dias_pagados: diasPagados,
+        sueldo_diario: salarioDiario,
+        sdi: emp.sdi ? Number(emp.sdi) : calcSDI(salarioDiario),
+        total_percepciones: totalPercepciones,
+        total_deducciones: totalDeducciones,
+        total_gravado: totalGravado,
+        total_exento: totalExento,
+        isr,
+        subsidio,
+        imss_obrero: imssObrero,
+        neto_pagar: neto,
+        observaciones: esLiquidacion ? "Liquidación / Finiquito - empleado dado de baja por renuncia" : "Recibo personal - empleado dado de baja",
+      })
+      .select("id")
+      .single();
+    if (re) throw new Error(re.message);
+
+    // Líneas del recibo
+    const lines: Array<{
+      concepto_clave: string;
+      descripcion: string;
+      tipo: "percepcion" | "deduccion";
+      importe_gravado: number;
+      importe_exento: number;
+    }> = [];
+
+    if (!esLiquidacion) {
+      // Para recibo normal: agregar línea de sueldo
+      lines.push({
+        concepto_clave: "001",
+        descripcion: `Sueldo (${diasPagados} días)`,
+        tipo: "percepcion",
+        importe_gravado: totalGravado,
+        importe_exento: 0,
+      });
+    }
+
+    // Percepciones personalizadas del usuario
+    for (const p of percepciones) {
+      lines.push({
+        concepto_clave: p.clave,
+        descripcion: p.descripcion ?? p.clave,
+        tipo: "percepcion",
+        importe_gravado: p.importe_gravado,
+        importe_exento: p.importe_exento,
+      });
+    }
+
+    // ISR
+    if (isr > 0) {
+      lines.push({
+        concepto_clave: "002",
+        descripcion: "ISR",
+        tipo: "deduccion",
+        importe_gravado: isr,
+        importe_exento: 0,
+      });
+    }
+
+    // IMSS Obrero
+    if (incluirImss && imssObrero > 0) {
+      lines.push({
+        concepto_clave: "001",
+        descripcion: "IMSS Obrero",
+        tipo: "deduccion",
+        importe_gravado: imssObrero,
+        importe_exento: 0,
+      });
+    }
+
+    // Deducciones personalizadas del usuario
+    for (const d of deducciones) {
+      lines.push({
+        concepto_clave: d.clave,
+        descripcion: d.descripcion ?? d.clave,
+        tipo: "deduccion",
+        importe_gravado: d.importe,
+        importe_exento: 0,
+      });
+    }
+
+    await supabase.from("payroll_receipt_lines").insert(
+      lines.map(l => ({ ...l, receipt_id: receipt.id, organization_id: organizationId })),
+    );
+
+    // Opcionalmente timbrar
+    let stampResult = null;
+    if (timbrar) {
+      try {
+        const { stampPayrollReceipt } = await import("@/lib/cfdi.functions");
+        stampResult = await stampPayrollReceipt({ data: { receiptId: receipt.id } });
+      } catch (e: any) {
+        stampResult = { error: e.message };
+      }
+    }
+
+    return {
+      receiptId: receipt.id,
+      neto,
+      isr,
+      subsidio,
+      imss_obrero: imssObrero,
+      total_percepciones: totalPercepciones,
+      total_deducciones: totalDeducciones,
+      timbrado: stampResult,
+    };
+  });
+
 export const getReceiptDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ receiptId: z.string().uuid() }).parse(i))
@@ -548,5 +815,40 @@ export const getReceiptDetail = createServerFn({ method: "POST" })
       .order("concepto_clave");
     if (lerr) throw new Error(lerr.message);
     return { receipt, lines: lines ?? [] };
+  });
+
+export const listPersonalReceipts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ organizationId: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: receipts, error } = await context.supabase
+      .from("payroll_receipts")
+      .select("id, employee_id, total_percepciones, total_deducciones, neto_pagar, isr, subsidio, dias_pagados, observaciones, created_at")
+      .eq("organization_id", data.organizationId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    if (!receipts?.length) return [];
+
+    const receiptIds = receipts.map((r: any) => r.id);
+    const { data: stamps } = await context.supabase
+      .from("cfdi_stamps")
+      .select("id, uuid_sat, estatus, kind, reference_id")
+      .in("reference_id", receiptIds)
+      .eq("kind", "nomina");
+
+    const empIds = [...new Set(receipts.map((r: any) => r.employee_id).filter(Boolean))];
+    const { data: employees } = empIds.length
+      ? await context.supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno").in("id", empIds)
+      : { data: [] };
+
+    const empMap = new Map((employees ?? []).map((e: any) => [e.id, e]));
+
+    return receipts
+      .map((r: any) => ({
+        ...r,
+        employee: empMap.get(r.employee_id) ?? null,
+        stamp: (stamps ?? []).find((s: any) => s.reference_id === r.id && s.estatus === "timbrado"),
+      }))
+      .filter((r: any) => r.stamp);
   });
 

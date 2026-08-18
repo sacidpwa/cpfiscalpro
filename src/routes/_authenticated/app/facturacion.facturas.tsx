@@ -356,7 +356,7 @@ function Facturas() {
   );
 }
 
-function InvoiceForm({ organizationId, onClose, onSaved }: { organizationId: string; onClose: () => void; onSaved: () => void }) {
+export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerId }: { organizationId: string; onClose: () => void; onSaved: () => void; prefillCustomerId?: string }) {
   const qc = useQueryClient();
   const listCust = useServerFn(listCustomers);
   const listProds = useServerFn(listProducts);
@@ -403,6 +403,25 @@ function InvoiceForm({ organizationId, onClose, onSaved }: { organizationId: str
     queryFn: () => listItems({ data: { customerId } }),
     enabled: !!customerId,
   });
+
+  useEffect(() => {
+    if (!prefillCustomerId || !customers?.length) return;
+    const c = (customers as any[]).find((x) => x.id === prefillCustomerId);
+    if (!c) return;
+    setCustomerId(c.id);
+    if (c.moneda) setMoneda(c.moneda);
+    setUsoCfdi(c.uso_cfdi_default || "G03");
+    setFormaPago("03");
+    setMetodoPago(c.metodo_pago_default || "PUE");
+    const now = new Date();
+    const mes = now.toLocaleString("es-MX", { month: "long", year: "numeric" });
+    if (c.facturacion_mensual_producto_id) {
+      const desc = c.facturacion_mensual_descripcion ? `${c.facturacion_mensual_descripcion} - ${mes}` : undefined;
+      setItems([{ ref: `p:${c.facturacion_mensual_producto_id}`, cantidad: 1, descuento: 0, ...(desc ? { descripcion: desc } : {}) }]);
+    } else if (c.facturacion_mensual_descripcion) {
+      setItems([{ ref: "", cantidad: 1, descuento: 0, descripcion: `${c.facturacion_mensual_descripcion} - ${mes}` }]);
+    }
+  }, [prefillCustomerId, customers]);
 
   // Set defaults when customer changes
   function pickCustomer(id: string) {

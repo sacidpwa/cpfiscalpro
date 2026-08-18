@@ -50,6 +50,27 @@ function estadoFromCP(cp: string): string {
   return "MEX";
 }
 
+function calcAntiguedad(fechaAlta: string | null | undefined, fechaRef: string): string {
+  if (!fechaAlta) return "P0D";
+  const altaStr = fechaAlta.includes("T") ? fechaAlta.split("T")[0] : fechaAlta;
+  const refStr = fechaRef.includes("T") ? fechaRef.split("T")[0] : fechaRef;
+  const alta = new Date(altaStr + "T00:00:00Z");
+  const ref = new Date(refStr + "T00:00:00Z");
+  let years = ref.getUTCFullYear() - alta.getUTCFullYear();
+  let months = ref.getUTCMonth() - alta.getUTCMonth();
+  let days = ref.getUTCDate() - alta.getUTCDate();
+  if (days < 0) {
+    months--;
+    const prevMonth = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 0));
+    days += prevMonth.getUTCDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  return `P${years}Y${months}M${days}D`;
+}
+
 function normalizeCp(value: unknown, fallback = "00000"): string {
   return String(value ?? "").match(/\d{5}/)?.[0] ?? fallback;
 }
@@ -87,6 +108,7 @@ async function callFacturapi(key: string, path: string, init: RequestInit = {}):
   });
   const text = await res.text();
   if (!res.ok) {
+    console.error(`[FACTURAPI] ${res.status} raw:`, text);
     let msg = text;
     try { msg = JSON.parse(text).message ?? text; } catch {}
     throw new Error(`FacturAPI ${res.status}: ${msg}`);
@@ -278,22 +300,29 @@ async function stampPayrollReceiptInternal({
     const cpEmisor = normalizeCp(org.codigo_postal);
     const cpReceptor = normalizeCp((emp as any).cp_fiscal, cpEmisor);
 
+    // Detectar si es liquidación/finiquito (tipo_nomina "E" = extraordinaria)
+    const esLiquidacion = String(receipt.observaciones ?? "").toLowerCase().includes("liquidaci") || String(receipt.observaciones ?? "").toLowerCase().includes("finiquito");
+
     // 3) Mapear percepciones y deducciones (esquema FacturAPI v2 - español)
     const percepcionesArr = (receipt.lines ?? [])
       .filter((l: any) => l.tipo === "percepcion")
       .map((l: any) => ({
         tipo_percepcion: l.concepto_clave || "001",
         clave: l.concepto_clave || "001",
+        concepto: (l.descripcion || "").replace(/[\r\n]+/g, " ").trim(),
         importe_gravado: Number(l.importe_gravado || 0),
         importe_exento: Number(l.importe_exento || 0),
+        horas_extra: [],
       }));
 
     if (!percepcionesArr.length) {
       percepcionesArr.push({
         tipo_percepcion: "001",
         clave: "001",
+        concepto: "Sueldo",
         importe_gravado: Number(receipt.total_gravado || receipt.total_percepciones || 0),
         importe_exento: Number(receipt.total_exento || 0),
+        horas_extra: [],
       });
     }
 
@@ -309,7 +338,25 @@ async function stampPayrollReceiptInternal({
 
     const totalGravado = percepcionesArr.reduce((s: number, p: any) => s + p.importe_gravado, 0);
     const totalExento = percepcionesArr.reduce((s: number, p: any) => s + p.importe_exento, 0);
-    const totalSueldos = totalGravado + totalExento;
+
+    const sepTipos = ["022", "023", "025"];
+    const sepPercepciones = percepcionesArr.filter((p: any) => sepTipos.includes(p.tipo_percepcion));
+    const sueldoPercepciones = percepcionesArr.filter((p: any) => !sepTipos.includes(p.tipo_percepcion));
+
+    const totalSueldos = sueldoPercepciones.reduce((s: number, p: any) => s + p.importe_gravado + p.importe_exento, 0);
+    const totalSeparacion = sepPercepciones.reduce((s: number, p: any) => s + p.importe_gravado + p.importe_exento, 0);
+    const separacionGravado = sepPercepciones.reduce((s: number, p: any) => s + p.importe_gravado, 0);
+    const separacionExento = sepPercepciones.reduce((s: number, p: any) => s + p.importe_exento, 0);
+
+    const numAniosServicio = (() => {
+      if (!emp.fecha_alta) return 1;
+      const alta = new Date(emp.fecha_alta.includes("T") ? emp.fecha_alta : emp.fecha_alta + "T00:00:00Z");
+      const ref = new Date(period.fecha_fin.includes("T") ? period.fecha_fin : period.fecha_fin + "T00:00:00Z");
+      let years = ref.getUTCFullYear() - alta.getUTCFullYear();
+      const anniv = new Date(Date.UTC(ref.getUTCFullYear(), alta.getUTCMonth(), alta.getUTCDate()));
+      if (ref < anniv) years--;
+      return Math.max(years, 0);
+    })();
 
     const isrDed = deduccionesArr.filter((d: any) => d.tipo_deduccion === "002");
     const otrasDed = deduccionesArr.filter((d: any) => d.tipo_deduccion !== "002");
@@ -350,7 +397,7 @@ async function stampPayrollReceiptInternal({
         {
           type: "nomina",
           data: {
-            tipo_nomina: "O",
+            tipo_nomina: esLiquidacion ? "E" : "O",
             fecha_pago: period.fecha_pago,
             fecha_inicial_pago: period.fecha_inicio,
             fecha_final_pago: period.fecha_fin,
@@ -363,20 +410,30 @@ async function stampPayrollReceiptInternal({
               curp: emp.curp,
               num_seguridad_social: emp.nss || "00000000000",
               fecha_inicio_rel_laboral: emp.fecha_alta,
+              antiguedad: calcAntiguedad(emp.fecha_alta, period.fecha_fin),
               tipo_contrato: "01",
               tipo_regimen: "02",
-              sindicalizado: false,
               tipo_jornada: "01",
-              periodicidad_pago: FREQ_SAT[period.periodicidad] || "04",
+              periodicidad_pago: esLiquidacion ? "99" : (FREQ_SAT[period.periodicidad] || "04"),
               departamento: emp.departamento || undefined,
               puesto: emp.puesto || undefined,
               riesgo_puesto: "1",
-              salario_base_cot_apor: Number(emp.sdi),
               salario_diario_integrado: Number(emp.sdi),
               clave_ent_fed: estadoFromCP(cpReceptor),
               num_empleado: emp.numero || receipt.id.slice(0, 8),
             },
-            percepciones: { percepcion: percepcionesArr },
+            percepciones: {
+              ...(totalSeparacion > 0 ? {
+                separacion_indemnizacion: {
+                  total_pagado: totalSeparacion,
+                  num_anos_servicio: numAniosServicio,
+                  ultimo_sueldo_mens_ord: Number(emp.sdi) * 30,
+                  ingreso_acumulable: separacionGravado,
+                  ingreso_no_acumulable: separacionExento,
+                },
+              } : {}),
+              percepcion: percepcionesArr,
+            },
             deducciones: deduccionesArr.length ? deduccionesArr : undefined,
             otros_pagos: [
               {
@@ -393,6 +450,7 @@ async function stampPayrollReceiptInternal({
     };
 
     // 5) Llamar a FacturAPI
+    console.log("[TIMBRADO] Payload COMPLETO:", JSON.stringify(payload, null, 2));
     let stampedResp: any;
     try {
       stampedResp = await callFacturapi(key, "/invoices", {
@@ -440,7 +498,7 @@ async function stampPayrollReceiptInternal({
       console.warn("No se pudo guardar XML/PDF en storage:", e);
     }
 
-    await (supabaseAdmin as any).from("cfdi_stamps").insert({
+    const { data: stampRow } = await (supabaseAdmin as any).from("cfdi_stamps").insert({
       organization_id: receipt.organization_id,
       kind: "nomina",
       reference_id: receipt.id,
@@ -456,9 +514,9 @@ async function stampPayrollReceiptInternal({
       payload,
       total,
       timbrado_por: userId,
-    });
+    }).select("id").single();
 
-    return { ok: true, uuid, facturapi_id: fapiId, ambiente: environment };
+    return { ok: true, uuid, stampId: stampRow?.id, facturapi_id: fapiId, ambiente: environment };
 }
 
 export const cancelCfdiStamp = createServerFn({ method: "POST" })

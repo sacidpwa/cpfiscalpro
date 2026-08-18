@@ -28,6 +28,9 @@ const baseSchema = z.object({
   metodo_pago_default: z.enum(["PUE", "PPD"]).default("PUE"),
   notas: z.string().max(1000).optional().nullable(),
   activo: z.boolean().default(true),
+  facturacion_mensual_activo: z.boolean().default(false),
+  facturacion_mensual_producto_id: z.string().uuid().optional().nullable(),
+  facturacion_mensual_descripcion: z.string().max(255).optional().nullable(),
 });
 
 export const listCustomers = createServerFn({ method: "POST" })

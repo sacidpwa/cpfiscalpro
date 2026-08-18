@@ -3,10 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { listCustomers, upsertCustomer, deleteCustomer, importCustomers, importCustomersFromCfdiXml } from "@/lib/customers.functions";
+import { listProducts } from "@/lib/products.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { ImportDialog } from "@/components/import-dialog";
-import { Users, Plus, Pencil, Trash2, X, Upload, FileCode2 } from "lucide-react";
+import { InvoiceForm } from "./facturacion.facturas";
+import { Users, Plus, Pencil, Trash2, X, Upload, FileCode2, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/facturacion/clientes")({
@@ -31,6 +33,7 @@ function Clientes() {
   const [q, setQ] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [importingXml, setImportingXml] = useState(false);
+  const [prefillCustomerId, setPrefillCustomerId] = useState<string | null>(null);
 
   async function handleXmlDrop(fileList: FileList | File[]) {
     const all = Array.from(fileList);
@@ -190,6 +193,11 @@ function Clientes() {
                     <td className="px-3 py-2 text-right tabular-nums text-xs">{c.dias_credito}d</td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex justify-end gap-1">
+                        {c.facturacion_mensual_activo && (
+                          <button onClick={() => setPrefillCustomerId(c.id)} title="Generar factura mensual" className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20">
+                            <Receipt className="h-3 w-3" /> Facturar
+                          </button>
+                        )}
                         <button onClick={() => { setEditing(c); setOpen(true); }} className="rounded p-1 hover:bg-secondary"><Pencil className="h-3.5 w-3.5" /></button>
                         <button onClick={() => remove(c.id)} className="rounded p-1 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
@@ -201,7 +209,8 @@ function Clientes() {
           </div>
         )}
       </div>
-      {open && <CustomerForm initial={editing} onClose={() => { setOpen(false); setEditing(null); }} onSave={save} />}
+      {open && <CustomerForm initial={editing} onClose={() => { setOpen(false); setEditing(null); }} onSave={save} orgId={org.id} />}
+      {prefillCustomerId && <InvoiceForm organizationId={org.id} prefillCustomerId={prefillCustomerId} onClose={() => setPrefillCustomerId(null)} onSaved={() => { qc.invalidateQueries({ queryKey: ["invoices", org.id] }); setPrefillCustomerId(null); }} />}
       {importOpen && (
         <ImportDialog
           title="Importar clientes"
@@ -216,7 +225,13 @@ function Clientes() {
   );
 }
 
-function CustomerForm({ initial, onClose, onSave }: { initial: any; onClose: () => void; onSave: (f: any) => void }) {
+function CustomerForm({ initial, onClose, onSave, orgId }: { initial: any; onClose: () => void; onSave: (f: any) => void; orgId: string }) {
+  const listProds = useServerFn(listProducts);
+  const { data: products } = useQuery({
+    queryKey: ["products", orgId],
+    queryFn: () => listProds({ data: { organizationId: orgId } }),
+  });
+
   const [f, setF] = useState({
     id: initial?.id,
     rfc: initial?.rfc ?? "",
@@ -240,6 +255,9 @@ function CustomerForm({ initial, onClose, onSave }: { initial: any; onClose: () 
     forma_pago_default: initial?.forma_pago_default ?? "",
     notas: initial?.notas ?? "",
     activo: initial?.activo ?? true,
+    facturacion_mensual_activo: initial?.facturacion_mensual_activo ?? false,
+    facturacion_mensual_producto_id: initial?.facturacion_mensual_producto_id ?? "",
+    facturacion_mensual_descripcion: initial?.facturacion_mensual_descripcion ?? "",
   });
 
   return (
@@ -271,6 +289,37 @@ function CustomerForm({ initial, onClose, onSave }: { initial: any; onClose: () 
           <Input label="Colonia" value={f.colonia} onChange={(v) => setF({ ...f, colonia: v })} />
           <Input label="Municipio" value={f.municipio} onChange={(v) => setF({ ...f, municipio: v })} />
           <Input label="Estado" value={f.estado} onChange={(v) => setF({ ...f, estado: v })} />
+          <Field label="" className="col-span-3">
+            <div className="mt-2 rounded-md border border-dashed border-primary/30 bg-primary/5 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={f.facturacion_mensual_activo}
+                  onChange={(e) => setF({ ...f, facturacion_mensual_activo: e.target.checked })}
+                  className="rounded"
+                />
+                Facturación mensual activa
+              </label>
+              {f.facturacion_mensual_activo && (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-muted-foreground">Producto/servicio</span>
+                    <select
+                      value={f.facturacion_mensual_producto_id}
+                      onChange={(e) => setF({ ...f, facturacion_mensual_producto_id: e.target.value })}
+                      className="w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Selecciona…</option>
+                      {(products ?? []).filter((p: any) => p.activo).map((p: any) => (
+                        <option key={p.id} value={p.id}>{p.descripcion} — ${Number(p.precio_unitario).toFixed(2)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <Input label="Descripción del concepto" value={f.facturacion_mensual_descripcion} onChange={(v) => setF({ ...f, facturacion_mensual_descripcion: v })} placeholder="ej. Servicio de contabilidad mensual" />
+                </div>
+              )}
+            </div>
+          </Field>
           <Field label="Notas" className="col-span-3">
             <textarea value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })} rows={2} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring" />
           </Field>
@@ -327,12 +376,13 @@ const USOS_CFDI: [string, string][] = [
 function Field({ label, children, className = "" }: any) {
   return <label className={`block ${className}`}><span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>{children}</label>;
 }
-function Input({ label, value, onChange, required, type = "text", mono, className = "" }: { label: string; value: any; onChange: (v: string) => void; required?: boolean; type?: string; mono?: boolean; className?: string }) {
+function Input({ label, value, onChange, required, type = "text", mono, className = "", placeholder }: { label: string; value: any; onChange: (v: string) => void; required?: boolean; type?: string; mono?: boolean; className?: string; placeholder?: string }) {
   return (
     <Field label={label} className={className}>
       <input
         type={type}
         value={value}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         required={required}
         className={`w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring ${mono ? "font-mono" : ""}`}

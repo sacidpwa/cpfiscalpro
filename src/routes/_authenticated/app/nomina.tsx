@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -99,7 +99,12 @@ function Nomina() {
   return (
     <div>
       <PageHeader title="Nómina" description="Periodos calculados con cálculos de ISR e IMSS"
-        actions={<button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"><Plus className="h-4 w-4"/>Nuevo periodo</button>} />
+        actions={<>
+          <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"><Plus className="h-4 w-4"/>Nuevo periodo</button>
+          <Link to="/app/nomina-personal" className="inline-flex items-center gap-1.5 rounded-md border bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/10 hover:opacity-90">
+            <Info className="h-4 w-4"/> Recibo personal
+          </Link>
+        </>} />
       <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <div
           ref={periodsRef}

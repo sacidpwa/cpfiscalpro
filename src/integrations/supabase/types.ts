@@ -517,6 +517,9 @@ export type Database = {
           dias_credito: number
           email: string | null
           estado: string | null
+          facturacion_mensual_activo: boolean
+          facturacion_mensual_descripcion: string | null
+          facturacion_mensual_producto_id: string | null
           forma_pago_default: string | null
           id: string
           metodo_pago_default: string
@@ -545,6 +548,9 @@ export type Database = {
           dias_credito?: number
           email?: string | null
           estado?: string | null
+          facturacion_mensual_activo?: boolean
+          facturacion_mensual_descripcion?: string | null
+          facturacion_mensual_producto_id?: string | null
           forma_pago_default?: string | null
           id?: string
           metodo_pago_default?: string
@@ -573,6 +579,9 @@ export type Database = {
           dias_credito?: number
           email?: string | null
           estado?: string | null
+          facturacion_mensual_activo?: boolean
+          facturacion_mensual_descripcion?: string | null
+          facturacion_mensual_producto_id?: string | null
           forma_pago_default?: string | null
           id?: string
           metodo_pago_default?: string
@@ -2759,7 +2768,7 @@ export type Database = {
         | "lector"
         | "recursos_humanos"
       concept_type: "percepcion" | "deduccion"
-      employee_status: "activo" | "baja" | "suspendido"
+      employee_status: "activo" | "baja" | "suspendido" | "renuncia"
       import_kind:
         | "coi_cuentas"
         | "coi_polizas"
@@ -2918,7 +2927,7 @@ export const Constants = {
         "recursos_humanos",
       ],
       concept_type: ["percepcion", "deduccion"],
-      employee_status: ["activo", "baja", "suspendido"],
+      employee_status: ["activo", "baja", "suspendido", "renuncia"],
       import_kind: [
         "coi_cuentas",
         "coi_polizas",
