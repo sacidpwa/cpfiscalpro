@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { useOrg } from "@/lib/use-current-org";
-import { listMyBilling } from "@/lib/billing-subs.functions";
+import { listMyBilling, adminEmailSubscriptionInvoice } from "@/lib/billing-subs.functions";
 import { getCfdiDownloadUrl } from "@/lib/cfdi.functions";
-import { Receipt, AlertCircle, CheckCircle2, Download, Eye } from "lucide-react";
+import { Receipt, AlertCircle, CheckCircle2, Download, Eye, Send } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/cobranza")({
@@ -14,13 +15,16 @@ export const Route = createFileRoute("/_authenticated/app/cobranza")({
 
 function MyBilling() {
   const { current } = useOrg();
+  const qc = useQueryClient();
   const fn = useServerFn(listMyBilling);
   const getUrl = useServerFn(getCfdiDownloadUrl);
+  const emailFn = useServerFn(adminEmailSubscriptionInvoice);
   const { data } = useQuery({
     queryKey: ["my-billing", current?.id],
     queryFn: () => fn({ data: { organizationId: current!.id } }),
     enabled: !!current,
   });
+  const [emailingId, setEmailingId] = useState<string | null>(null);
 
   async function download(stampId: string, kind: "xml" | "pdf") {
     try {
@@ -55,6 +59,19 @@ function MyBilling() {
     } catch (e: any) { toast.error(e.message); }
   }
 
+  async function sendEmail(invoice: any) {
+    setEmailingId(invoice.id);
+    try {
+      await emailFn({ data: { invoiceId: invoice.id } });
+      toast.success("Correo enviado");
+      qc.invalidateQueries({ queryKey: ["my-billing", current?.id] });
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo enviar");
+    } finally {
+      setEmailingId(null);
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Mi suscripción" description="Plan, módulos contratados y estatus de pagos" />
@@ -82,6 +99,7 @@ function MyBilling() {
             <div className="mt-2 grid gap-3 text-sm sm:grid-cols-3">
               <Stat label="Plan" value={(data.plan as any).plan_name} />
               <Stat label="Mensualidad base" value={`$${Number((data.plan as any).mensualidad).toFixed(2)}`} />
+              <Stat label="Tipo de facturación" value={(data.plan as any).billing_type === 'fijo' ? 'Monto fijo' : 'Por módulos'} />
               <Stat label="Día de pago" value={String((data.plan as any).dia_pago)} />
               <Stat label="Estatus" value={(data.plan as any).estatus} />
               <Stat label="Método preferido" value={(data.plan as any).metodo_pago_preferido} />
@@ -146,6 +164,14 @@ function MyBilling() {
                             </button>
                             <button onClick={() => download(i.stamp.id, "xml")} className="rounded border px-1.5 py-0.5 text-[10px] font-mono hover:bg-secondary" title="XML">
                               XML
+                            </button>
+                            <button
+                              onClick={() => sendEmail(i)}
+                              disabled={emailingId === i.id}
+                              className="rounded p-1 hover:bg-secondary disabled:opacity-50"
+                              title="Enviar por correo"
+                            >
+                              <Send className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         ) : (

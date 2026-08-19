@@ -204,6 +204,7 @@ function PlanCard({ orgId, plan, onSave }: { orgId: string; plan: any; onSave: (
   const [f, setF] = useState({
     plan_name: plan?.plan_name ?? "Básico",
     mensualidad: Number(plan?.mensualidad ?? 0),
+    billing_type: (plan?.billing_type as "fijo" | "modulos") ?? "modulos",
     dia_pago: plan?.dia_pago ?? 10,
     fecha_inicio: plan?.fecha_inicio ?? new Date().toISOString().slice(0, 10),
     fecha_vencimiento: plan?.fecha_vencimiento ?? "",
@@ -216,6 +217,7 @@ function PlanCard({ orgId, plan, onSave }: { orgId: string; plan: any; onSave: (
       setF({
         plan_name: plan.plan_name ?? "Básico",
         mensualidad: Number(plan.mensualidad ?? 0),
+        billing_type: plan.billing_type ?? "modulos",
         dia_pago: plan.dia_pago ?? 10,
         fecha_inicio: plan.fecha_inicio ?? new Date().toISOString().slice(0, 10),
         fecha_vencimiento: plan.fecha_vencimiento ?? "",
@@ -240,6 +242,16 @@ function PlanCard({ orgId, plan, onSave }: { orgId: string; plan: any; onSave: (
             onChange={(e) => setF({ ...f, mensualidad: Number(e.target.value) })}
             className={inp}
           />
+        </Field>
+        <Field label="Tipo de facturación">
+          <select
+            value={f.billing_type}
+            onChange={(e) => setF({ ...f, billing_type: e.target.value as "fijo" | "modulos" })}
+            className={inp}
+          >
+            <option value="modulos">Por módulos (suma de costos)</option>
+            <option value="fijo">Monto fijo (solo mensualidad)</option>
+          </select>
         </Field>
         <Field label="Día de pago (1–28)">
           <input

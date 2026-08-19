@@ -11,9 +11,10 @@ import {
   adminEmailSubscriptionInvoice,
   adminMarkInvoicePaid,
   adminUpdateInvoiceMetodo,
+  adminCancelSubscriptionInvoice,
 } from "@/lib/billing-subs.functions";
 import { getCfdiDownloadUrl } from "@/lib/cfdi.functions";
-import { Loader2, CheckCircle2, Send, Stamp, Plus, Download, Eye } from "lucide-react";
+import { Loader2, CheckCircle2, Send, Stamp, Plus, Download, Eye, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/cobranza")({
   component: Cobranza,
@@ -21,9 +22,10 @@ export const Route = createFileRoute("/_authenticated/admin/cobranza")({
 
 const ESTATUS_CLASSES: Record<string, string> = {
   pendiente: "text-amber-600",
+  generada: "text-blue-600",
   pagada: "text-emerald-600",
   vencida: "text-red-600",
-  cancelada: "text-muted-foreground",
+  cancelada: "text-muted-foreground line-through",
 };
 
 function Cobranza() {
@@ -34,6 +36,7 @@ function Cobranza() {
   const emailFn = useServerFn(adminEmailSubscriptionInvoice);
   const markPaidFn = useServerFn(adminMarkInvoicePaid);
   const updateMetodoFn = useServerFn(adminUpdateInvoiceMetodo);
+  const cancelFn = useServerFn(adminCancelSubscriptionInvoice);
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["admin-pending-invoices"],
@@ -133,6 +136,17 @@ function Cobranza() {
     }
   }
 
+  async function handleCancel(invoice: any) {
+    if (!confirm(`¿Cancelar el CFDI de ${invoice.organizations?.razon_social}?`)) return;
+    try {
+      await cancelFn({ data: { invoiceId: invoice.id } });
+      toast.success("CFDI cancelado");
+      qc.invalidateQueries({ queryKey: ["admin-pending-invoices"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
   const pendientes = (invoices ?? []).filter(
     (i: any) => i.estatus !== "pagada" && i.estatus !== "cancelada"
   );
@@ -224,8 +238,59 @@ function Cobranza() {
                         />
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <div className="flex justify-end gap-1">
-                          {!cfdiExists ? (
+                        <div className="flex justify-end gap-1 flex-wrap">
+                          {cfdiExists ? (
+                            <>
+                              <span className="inline-flex items-center gap-1 rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 font-medium">
+                                <Stamp className="h-3 w-3" />
+                                Timbrada
+                              </span>
+                              <button
+                                onClick={() => previewPdf(inv.cfdi_stamp.id)}
+                                className="rounded p-1 hover:bg-secondary"
+                                title="Vista previa"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => download(inv.cfdi_stamp.id, "pdf")}
+                                className="rounded p-1 hover:bg-secondary"
+                                title="Descargar PDF"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => download(inv.cfdi_stamp.id, "xml")}
+                                className="rounded border px-1.5 py-0.5 text-[10px] font-mono hover:bg-secondary"
+                                title="Descargar XML"
+                              >
+                                XML
+                              </button>
+                              <button
+                                onClick={() => handleEmail(inv)}
+                                disabled={emailId}
+                                className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-secondary disabled:opacity-50"
+                                title="Enviar por correo"
+                              >
+                                {emailId ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Send className="h-3 w-3" />
+                                )}
+                                Enviar
+                              </button>
+                              {inv.estatus !== "pagada" && inv.estatus !== "cancelada" && (
+                                <button
+                                  onClick={() => handleCancel(inv)}
+                                  className="inline-flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                                  title="Cancelar CFDI"
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                  Cancelar
+                                </button>
+                              )}
+                            </>
+                          ) : (
                             <button
                               onClick={() => handleStamp(inv)}
                               disabled={stampId}
@@ -238,44 +303,8 @@ function Cobranza() {
                               )}
                               Timbrar
                             </button>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => previewPdf(inv.cfdi_stamp.id)}
-                                className="rounded p-1 hover:bg-secondary"
-                                title="Vista previa"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => download(inv.cfdi_stamp.id, "pdf")}
-                                className="rounded p-1 hover:bg-secondary"
-                                title="PDF"
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => download(inv.cfdi_stamp.id, "xml")}
-                                className="rounded border px-1.5 py-0.5 text-[10px] font-mono hover:bg-secondary"
-                                title="XML"
-                              >
-                                XML
-                              </button>
-                              <button
-                                onClick={() => handleEmail(inv)}
-                                disabled={emailId}
-                                className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-secondary disabled:opacity-50"
-                              >
-                                {emailId ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <Send className="h-3 w-3" />
-                                )}
-                                Enviar
-                              </button>
-                            </>
                           )}
-                          {inv.estatus !== "pagada" && (
+                          {inv.estatus !== "pagada" && inv.estatus !== "cancelada" && !cfdiExists && (
                             <button
                               onClick={() => handleMarkPaid(inv)}
                               className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-secondary"

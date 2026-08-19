@@ -2531,6 +2531,7 @@ export type Database = {
       subscription_plans: {
         Row: {
           activo: boolean
+          billing_type: string
           created_at: string
           dia_corte: number
           dia_pago: number
@@ -2549,6 +2550,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          billing_type?: string
           created_at?: string
           dia_corte?: number
           dia_pago?: number
@@ -2567,6 +2569,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          billing_type?: string
           created_at?: string
           dia_corte?: number
           dia_pago?: number

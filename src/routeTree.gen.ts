@@ -9,83 +9,78 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
-import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
-import { Route as AuthenticatedAppSuaRouteImport } from './routes/_authenticated/app/sua'
-import { Route as AuthenticatedAppResultadosRouteImport } from './routes/_authenticated/app/resultados'
-import { Route as AuthenticatedAppPolizasRouteImport } from './routes/_authenticated/app/polizas'
-import { Route as AuthenticatedAppNominaPersonalRouteImport } from './routes/_authenticated/app/nomina-personal'
-import { Route as AuthenticatedAppNominaRouteImport } from './routes/_authenticated/app/nomina'
-import { Route as AuthenticatedAppImportarLegacyRouteImport } from './routes/_authenticated/app/importar-legacy'
-import { Route as AuthenticatedAppImportarRouteImport } from './routes/_authenticated/app/importar'
-import { Route as AuthenticatedAppFlujoEfectivoRouteImport } from './routes/_authenticated/app/flujo-efectivo'
-import { Route as AuthenticatedAppExportarRouteImport } from './routes/_authenticated/app/exportar'
-import { Route as AuthenticatedAppEmpleadosRouteImport } from './routes/_authenticated/app/empleados'
-import { Route as AuthenticatedAppDeclaracionesRouteImport } from './routes/_authenticated/app/declaraciones'
-import { Route as AuthenticatedAppCuentasRouteImport } from './routes/_authenticated/app/cuentas'
-import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app/configuracion'
-import { Route as AuthenticatedAppCobranzaRouteImport } from './routes/_authenticated/app/cobranza'
-import { Route as AuthenticatedAppBalanzaRouteImport } from './routes/_authenticated/app/balanza'
-import { Route as AuthenticatedAppBalanceRouteImport } from './routes/_authenticated/app/balance'
-import { Route as AuthenticatedAppAsistenciasRouteImport } from './routes/_authenticated/app/asistencias'
-import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin/usuarios'
-import { Route as AuthenticatedAdminSolicitudesRouteImport } from './routes/_authenticated/admin/solicitudes'
-import { Route as AuthenticatedAdminFacturapiRouteImport } from './routes/_authenticated/admin/facturapi'
-import { Route as AuthenticatedAdminDeclaracionesRouteImport } from './routes/_authenticated/admin/declaraciones'
-import { Route as AuthenticatedAdminConsumoRouteImport } from './routes/_authenticated/admin/consumo'
-import { Route as AuthenticatedAdminCobranzaRouteImport } from './routes/_authenticated/admin/cobranza'
 import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authenticated/admin/clientes'
-import { Route as AuthenticatedAppSuaIndexRouteImport } from './routes/_authenticated/app/sua.index'
-import { Route as AuthenticatedAppSuaPatronesRouteImport } from './routes/_authenticated/app/sua.patrones'
-import { Route as AuthenticatedAppSuaPagosRouteImport } from './routes/_authenticated/app/sua.pagos'
-import { Route as AuthenticatedAppSuaMovimientosRouteImport } from './routes/_authenticated/app/sua.movimientos'
-import { Route as AuthenticatedAppSuaMensualesRouteImport } from './routes/_authenticated/app/sua.mensuales'
-import { Route as AuthenticatedAppSuaImportarRouteImport } from './routes/_authenticated/app/sua.importar'
-import { Route as AuthenticatedAppSuaBimestresRouteImport } from './routes/_authenticated/app/sua.bimestres'
-import { Route as AuthenticatedAppFacturacionProductosRouteImport } from './routes/_authenticated/app/facturacion.productos'
-import { Route as AuthenticatedAppFacturacionFacturasRouteImport } from './routes/_authenticated/app/facturacion.facturas'
-import { Route as AuthenticatedAppFacturacionConfiguracionRouteImport } from './routes/_authenticated/app/facturacion.configuracion'
-import { Route as AuthenticatedAppFacturacionComplementosRouteImport } from './routes/_authenticated/app/facturacion.complementos'
-import { Route as AuthenticatedAppFacturacionClientesRouteImport } from './routes/_authenticated/app/facturacion.clientes'
-import { Route as AuthenticatedAdminOrganizacionesOrgIdRouteImport } from './routes/_authenticated/admin/organizaciones.$orgId'
+import { Route as AuthenticatedAdminCobranzaRouteImport } from './routes/_authenticated/admin/cobranza'
+import { Route as AuthenticatedAdminConsumoRouteImport } from './routes/_authenticated/admin/consumo'
+import { Route as AuthenticatedAdminDeclaracionesRouteImport } from './routes/_authenticated/admin/declaraciones'
+import { Route as AuthenticatedAdminFacturapiRouteImport } from './routes/_authenticated/admin/facturapi'
+import { Route as AuthenticatedAdminSolicitudesRouteImport } from './routes/_authenticated/admin/solicitudes'
+import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin/usuarios'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
+import { Route as AuthenticatedAppAsistenciasRouteImport } from './routes/_authenticated/app/asistencias'
+import { Route as AuthenticatedAppBalanceRouteImport } from './routes/_authenticated/app/balance'
+import { Route as AuthenticatedAppBalanzaRouteImport } from './routes/_authenticated/app/balanza'
+import { Route as AuthenticatedAppCobranzaRouteImport } from './routes/_authenticated/app/cobranza'
+import { Route as AuthenticatedAppConfiguracionRouteImport } from './routes/_authenticated/app/configuracion'
+import { Route as AuthenticatedAppCuentasRouteImport } from './routes/_authenticated/app/cuentas'
+import { Route as AuthenticatedAppDeclaracionesRouteImport } from './routes/_authenticated/app/declaraciones'
+import { Route as AuthenticatedAppEmpleadosRouteImport } from './routes/_authenticated/app/empleados'
+import { Route as AuthenticatedAppExportarRouteImport } from './routes/_authenticated/app/exportar'
+import { Route as AuthenticatedAppFlujoEfectivoRouteImport } from './routes/_authenticated/app/flujo-efectivo'
+import { Route as AuthenticatedAppImportarRouteImport } from './routes/_authenticated/app/importar'
+import { Route as AuthenticatedAppImportarLegacyRouteImport } from './routes/_authenticated/app/importar-legacy'
+import { Route as AuthenticatedAppNominaRouteImport } from './routes/_authenticated/app/nomina'
+import { Route as AuthenticatedAppNominaPersonalRouteImport } from './routes/_authenticated/app/nomina-personal'
+import { Route as AuthenticatedAppPolizasRouteImport } from './routes/_authenticated/app/polizas'
+import { Route as AuthenticatedAppResultadosRouteImport } from './routes/_authenticated/app/resultados'
+import { Route as AuthenticatedAppSuaRouteImport } from './routes/_authenticated/app/sua'
 import { Route as AuthenticatedAdminClientesOrgIdRouteImport } from './routes/_authenticated/admin/clientes.$orgId'
-import { Route as AuthenticatedAppSuaMensualesIndexRouteImport } from './routes/_authenticated/app/sua.mensuales.index'
+import { Route as AuthenticatedAdminOrganizacionesOrgIdRouteImport } from './routes/_authenticated/admin/organizaciones.$orgId'
+import { Route as AuthenticatedAppFacturacionClientesRouteImport } from './routes/_authenticated/app/facturacion.clientes'
+import { Route as AuthenticatedAppFacturacionComplementosRouteImport } from './routes/_authenticated/app/facturacion.complementos'
+import { Route as AuthenticatedAppFacturacionConfiguracionRouteImport } from './routes/_authenticated/app/facturacion.configuracion'
+import { Route as AuthenticatedAppFacturacionFacturasRouteImport } from './routes/_authenticated/app/facturacion.facturas'
+import { Route as AuthenticatedAppFacturacionProductosRouteImport } from './routes/_authenticated/app/facturacion.productos'
+import { Route as AuthenticatedAppSuaIndexRouteImport } from './routes/_authenticated/app/sua.index'
+import { Route as AuthenticatedAppSuaBimestresRouteImport } from './routes/_authenticated/app/sua.bimestres'
+import { Route as AuthenticatedAppSuaImportarRouteImport } from './routes/_authenticated/app/sua.importar'
+import { Route as AuthenticatedAppSuaMensualesRouteImport } from './routes/_authenticated/app/sua.mensuales'
+import { Route as AuthenticatedAppSuaMovimientosRouteImport } from './routes/_authenticated/app/sua.movimientos'
+import { Route as AuthenticatedAppSuaPagosRouteImport } from './routes/_authenticated/app/sua.pagos'
+import { Route as AuthenticatedAppSuaPatronesRouteImport } from './routes/_authenticated/app/sua.patrones'
 import { Route as AuthenticatedAppSuaBimestresIndexRouteImport } from './routes/_authenticated/app/sua.bimestres.index'
-import { Route as AuthenticatedAppSuaMensualesIdRouteImport } from './routes/_authenticated/app/sua.mensuales.$id'
 import { Route as AuthenticatedAppSuaBimestresIdRouteImport } from './routes/_authenticated/app/sua.bimestres.$id'
+import { Route as AuthenticatedAppSuaMensualesIndexRouteImport } from './routes/_authenticated/app/sua.mensuales.index'
+import { Route as AuthenticatedAppSuaMensualesIdRouteImport } from './routes/_authenticated/app/sua.mensuales.$id'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
-  id: '/app/',
-  path: '/app/',
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
@@ -93,130 +88,10 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
-const AuthenticatedAppSuaRoute = AuthenticatedAppSuaRouteImport.update({
-  id: '/app/sua',
-  path: '/app/sua',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAppResultadosRoute =
-  AuthenticatedAppResultadosRouteImport.update({
-    id: '/app/resultados',
-    path: '/app/resultados',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppPolizasRoute = AuthenticatedAppPolizasRouteImport.update({
-  id: '/app/polizas',
-  path: '/app/polizas',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAppNominaPersonalRoute =
-  AuthenticatedAppNominaPersonalRouteImport.update({
-    id: '/app/nomina-personal',
-    path: '/app/nomina-personal',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppNominaRoute = AuthenticatedAppNominaRouteImport.update({
-  id: '/app/nomina',
-  path: '/app/nomina',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAppImportarLegacyRoute =
-  AuthenticatedAppImportarLegacyRouteImport.update({
-    id: '/app/importar-legacy',
-    path: '/app/importar-legacy',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppImportarRoute =
-  AuthenticatedAppImportarRouteImport.update({
-    id: '/app/importar',
-    path: '/app/importar',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppFlujoEfectivoRoute =
-  AuthenticatedAppFlujoEfectivoRouteImport.update({
-    id: '/app/flujo-efectivo',
-    path: '/app/flujo-efectivo',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppExportarRoute =
-  AuthenticatedAppExportarRouteImport.update({
-    id: '/app/exportar',
-    path: '/app/exportar',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppEmpleadosRoute =
-  AuthenticatedAppEmpleadosRouteImport.update({
-    id: '/app/empleados',
-    path: '/app/empleados',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppDeclaracionesRoute =
-  AuthenticatedAppDeclaracionesRouteImport.update({
-    id: '/app/declaraciones',
-    path: '/app/declaraciones',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppCuentasRoute = AuthenticatedAppCuentasRouteImport.update({
-  id: '/app/cuentas',
-  path: '/app/cuentas',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAppConfiguracionRoute =
-  AuthenticatedAppConfiguracionRouteImport.update({
-    id: '/app/configuracion',
-    path: '/app/configuracion',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppCobranzaRoute =
-  AuthenticatedAppCobranzaRouteImport.update({
-    id: '/app/cobranza',
-    path: '/app/cobranza',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppBalanzaRoute = AuthenticatedAppBalanzaRouteImport.update({
-  id: '/app/balanza',
-  path: '/app/balanza',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAppBalanceRoute = AuthenticatedAppBalanceRouteImport.update({
-  id: '/app/balance',
-  path: '/app/balance',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAppAsistenciasRoute =
-  AuthenticatedAppAsistenciasRouteImport.update({
-    id: '/app/asistencias',
-    path: '/app/asistencias',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminUsuariosRoute =
-  AuthenticatedAdminUsuariosRouteImport.update({
-    id: '/usuarios',
-    path: '/usuarios',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminSolicitudesRoute =
-  AuthenticatedAdminSolicitudesRouteImport.update({
-    id: '/solicitudes',
-    path: '/solicitudes',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminFacturapiRoute =
-  AuthenticatedAdminFacturapiRouteImport.update({
-    id: '/facturapi',
-    path: '/facturapi',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminDeclaracionesRoute =
-  AuthenticatedAdminDeclaracionesRouteImport.update({
-    id: '/declaraciones',
-    path: '/declaraciones',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminConsumoRoute =
-  AuthenticatedAdminConsumoRouteImport.update({
-    id: '/consumo',
-    path: '/consumo',
+const AuthenticatedAdminClientesRoute =
+  AuthenticatedAdminClientesRouteImport.update({
+    id: '/clientes',
+    path: '/clientes',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminCobranzaRoute =
@@ -225,70 +100,153 @@ const AuthenticatedAdminCobranzaRoute =
     path: '/cobranza',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedAdminClientesRoute =
-  AuthenticatedAdminClientesRouteImport.update({
-    id: '/clientes',
-    path: '/clientes',
+const AuthenticatedAdminConsumoRoute =
+  AuthenticatedAdminConsumoRouteImport.update({
+    id: '/consumo',
+    path: '/consumo',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedAppSuaIndexRoute =
-  AuthenticatedAppSuaIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAppSuaRoute,
+const AuthenticatedAdminDeclaracionesRoute =
+  AuthenticatedAdminDeclaracionesRouteImport.update({
+    id: '/declaraciones',
+    path: '/declaraciones',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedAppSuaPatronesRoute =
-  AuthenticatedAppSuaPatronesRouteImport.update({
-    id: '/patrones',
-    path: '/patrones',
-    getParentRoute: () => AuthenticatedAppSuaRoute,
+const AuthenticatedAdminFacturapiRoute =
+  AuthenticatedAdminFacturapiRouteImport.update({
+    id: '/facturapi',
+    path: '/facturapi',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedAppSuaPagosRoute =
-  AuthenticatedAppSuaPagosRouteImport.update({
-    id: '/pagos',
-    path: '/pagos',
-    getParentRoute: () => AuthenticatedAppSuaRoute,
+const AuthenticatedAdminSolicitudesRoute =
+  AuthenticatedAdminSolicitudesRouteImport.update({
+    id: '/solicitudes',
+    path: '/solicitudes',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedAppSuaMovimientosRoute =
-  AuthenticatedAppSuaMovimientosRouteImport.update({
-    id: '/movimientos',
-    path: '/movimientos',
-    getParentRoute: () => AuthenticatedAppSuaRoute,
+const AuthenticatedAdminUsuariosRoute =
+  AuthenticatedAdminUsuariosRouteImport.update({
+    id: '/usuarios',
+    path: '/usuarios',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedAppSuaMensualesRoute =
-  AuthenticatedAppSuaMensualesRouteImport.update({
-    id: '/mensuales',
-    path: '/mensuales',
-    getParentRoute: () => AuthenticatedAppSuaRoute,
-  } as any)
-const AuthenticatedAppSuaImportarRoute =
-  AuthenticatedAppSuaImportarRouteImport.update({
-    id: '/importar',
-    path: '/importar',
-    getParentRoute: () => AuthenticatedAppSuaRoute,
-  } as any)
-const AuthenticatedAppSuaBimestresRoute =
-  AuthenticatedAppSuaBimestresRouteImport.update({
-    id: '/bimestres',
-    path: '/bimestres',
-    getParentRoute: () => AuthenticatedAppSuaRoute,
-  } as any)
-const AuthenticatedAppFacturacionProductosRoute =
-  AuthenticatedAppFacturacionProductosRouteImport.update({
-    id: '/app/facturacion/productos',
-    path: '/app/facturacion/productos',
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/app/',
+  path: '/app/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppAsistenciasRoute =
+  AuthenticatedAppAsistenciasRouteImport.update({
+    id: '/app/asistencias',
+    path: '/app/asistencias',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAppFacturacionFacturasRoute =
-  AuthenticatedAppFacturacionFacturasRouteImport.update({
-    id: '/app/facturacion/facturas',
-    path: '/app/facturacion/facturas',
+const AuthenticatedAppBalanceRoute = AuthenticatedAppBalanceRouteImport.update({
+  id: '/app/balance',
+  path: '/app/balance',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppBalanzaRoute = AuthenticatedAppBalanzaRouteImport.update({
+  id: '/app/balanza',
+  path: '/app/balanza',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppCobranzaRoute =
+  AuthenticatedAppCobranzaRouteImport.update({
+    id: '/app/cobranza',
+    path: '/app/cobranza',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAppFacturacionConfiguracionRoute =
-  AuthenticatedAppFacturacionConfiguracionRouteImport.update({
-    id: '/app/facturacion/configuracion',
-    path: '/app/facturacion/configuracion',
+const AuthenticatedAppConfiguracionRoute =
+  AuthenticatedAppConfiguracionRouteImport.update({
+    id: '/app/configuracion',
+    path: '/app/configuracion',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppCuentasRoute = AuthenticatedAppCuentasRouteImport.update({
+  id: '/app/cuentas',
+  path: '/app/cuentas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppDeclaracionesRoute =
+  AuthenticatedAppDeclaracionesRouteImport.update({
+    id: '/app/declaraciones',
+    path: '/app/declaraciones',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppEmpleadosRoute =
+  AuthenticatedAppEmpleadosRouteImport.update({
+    id: '/app/empleados',
+    path: '/app/empleados',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppExportarRoute =
+  AuthenticatedAppExportarRouteImport.update({
+    id: '/app/exportar',
+    path: '/app/exportar',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppFlujoEfectivoRoute =
+  AuthenticatedAppFlujoEfectivoRouteImport.update({
+    id: '/app/flujo-efectivo',
+    path: '/app/flujo-efectivo',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppImportarRoute =
+  AuthenticatedAppImportarRouteImport.update({
+    id: '/app/importar',
+    path: '/app/importar',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppImportarLegacyRoute =
+  AuthenticatedAppImportarLegacyRouteImport.update({
+    id: '/app/importar-legacy',
+    path: '/app/importar-legacy',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppNominaRoute = AuthenticatedAppNominaRouteImport.update({
+  id: '/app/nomina',
+  path: '/app/nomina',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppNominaPersonalRoute =
+  AuthenticatedAppNominaPersonalRouteImport.update({
+    id: '/app/nomina-personal',
+    path: '/app/nomina-personal',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppPolizasRoute = AuthenticatedAppPolizasRouteImport.update({
+  id: '/app/polizas',
+  path: '/app/polizas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppResultadosRoute =
+  AuthenticatedAppResultadosRouteImport.update({
+    id: '/app/resultados',
+    path: '/app/resultados',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppSuaRoute = AuthenticatedAppSuaRouteImport.update({
+  id: '/app/sua',
+  path: '/app/sua',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminClientesOrgIdRoute =
+  AuthenticatedAdminClientesOrgIdRouteImport.update({
+    id: '/$orgId',
+    path: '/$orgId',
+    getParentRoute: () => AuthenticatedAdminClientesRoute,
+  } as any)
+const AuthenticatedAdminOrganizacionesOrgIdRoute =
+  AuthenticatedAdminOrganizacionesOrgIdRouteImport.update({
+    id: '/organizaciones/$orgId',
+    path: '/organizaciones/$orgId',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAppFacturacionClientesRoute =
+  AuthenticatedAppFacturacionClientesRouteImport.update({
+    id: '/app/facturacion/clientes',
+    path: '/app/facturacion/clientes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAppFacturacionComplementosRoute =
@@ -297,29 +255,65 @@ const AuthenticatedAppFacturacionComplementosRoute =
     path: '/app/facturacion/complementos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAppFacturacionClientesRoute =
-  AuthenticatedAppFacturacionClientesRouteImport.update({
-    id: '/app/facturacion/clientes',
-    path: '/app/facturacion/clientes',
+const AuthenticatedAppFacturacionConfiguracionRoute =
+  AuthenticatedAppFacturacionConfiguracionRouteImport.update({
+    id: '/app/facturacion/configuracion',
+    path: '/app/facturacion/configuracion',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminOrganizacionesOrgIdRoute =
-  AuthenticatedAdminOrganizacionesOrgIdRouteImport.update({
-    id: '/organizaciones/$orgId',
-    path: '/organizaciones/$orgId',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
+const AuthenticatedAppFacturacionFacturasRoute =
+  AuthenticatedAppFacturacionFacturasRouteImport.update({
+    id: '/app/facturacion/facturas',
+    path: '/app/facturacion/facturas',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminClientesOrgIdRoute =
-  AuthenticatedAdminClientesOrgIdRouteImport.update({
-    id: '/$orgId',
-    path: '/$orgId',
-    getParentRoute: () => AuthenticatedAdminClientesRoute,
+const AuthenticatedAppFacturacionProductosRoute =
+  AuthenticatedAppFacturacionProductosRouteImport.update({
+    id: '/app/facturacion/productos',
+    path: '/app/facturacion/productos',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAppSuaMensualesIndexRoute =
-  AuthenticatedAppSuaMensualesIndexRouteImport.update({
+const AuthenticatedAppSuaIndexRoute =
+  AuthenticatedAppSuaIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedAppSuaMensualesRoute,
+    getParentRoute: () => AuthenticatedAppSuaRoute,
+  } as any)
+const AuthenticatedAppSuaBimestresRoute =
+  AuthenticatedAppSuaBimestresRouteImport.update({
+    id: '/bimestres',
+    path: '/bimestres',
+    getParentRoute: () => AuthenticatedAppSuaRoute,
+  } as any)
+const AuthenticatedAppSuaImportarRoute =
+  AuthenticatedAppSuaImportarRouteImport.update({
+    id: '/importar',
+    path: '/importar',
+    getParentRoute: () => AuthenticatedAppSuaRoute,
+  } as any)
+const AuthenticatedAppSuaMensualesRoute =
+  AuthenticatedAppSuaMensualesRouteImport.update({
+    id: '/mensuales',
+    path: '/mensuales',
+    getParentRoute: () => AuthenticatedAppSuaRoute,
+  } as any)
+const AuthenticatedAppSuaMovimientosRoute =
+  AuthenticatedAppSuaMovimientosRouteImport.update({
+    id: '/movimientos',
+    path: '/movimientos',
+    getParentRoute: () => AuthenticatedAppSuaRoute,
+  } as any)
+const AuthenticatedAppSuaPagosRoute =
+  AuthenticatedAppSuaPagosRouteImport.update({
+    id: '/pagos',
+    path: '/pagos',
+    getParentRoute: () => AuthenticatedAppSuaRoute,
+  } as any)
+const AuthenticatedAppSuaPatronesRoute =
+  AuthenticatedAppSuaPatronesRouteImport.update({
+    id: '/patrones',
+    path: '/patrones',
+    getParentRoute: () => AuthenticatedAppSuaRoute,
   } as any)
 const AuthenticatedAppSuaBimestresIndexRoute =
   AuthenticatedAppSuaBimestresIndexRouteImport.update({
@@ -327,17 +321,23 @@ const AuthenticatedAppSuaBimestresIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAppSuaBimestresRoute,
   } as any)
-const AuthenticatedAppSuaMensualesIdRoute =
-  AuthenticatedAppSuaMensualesIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedAppSuaMensualesRoute,
-  } as any)
 const AuthenticatedAppSuaBimestresIdRoute =
   AuthenticatedAppSuaBimestresIdRouteImport.update({
     id: '/$id',
     path: '/$id',
     getParentRoute: () => AuthenticatedAppSuaBimestresRoute,
+  } as any)
+const AuthenticatedAppSuaMensualesIndexRoute =
+  AuthenticatedAppSuaMensualesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppSuaMensualesRoute,
+  } as any)
+const AuthenticatedAppSuaMensualesIdRoute =
+  AuthenticatedAppSuaMensualesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAppSuaMensualesRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -646,11 +646,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -660,19 +660,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/onboarding': {
-      id: '/_authenticated/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
@@ -681,11 +674,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/app/': {
-      id: '/_authenticated/app/'
-      path: '/app'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/': {
@@ -695,158 +688,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/app/sua': {
-      id: '/_authenticated/app/sua'
-      path: '/app/sua'
-      fullPath: '/app/sua'
-      preLoaderRoute: typeof AuthenticatedAppSuaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/resultados': {
-      id: '/_authenticated/app/resultados'
-      path: '/app/resultados'
-      fullPath: '/app/resultados'
-      preLoaderRoute: typeof AuthenticatedAppResultadosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/polizas': {
-      id: '/_authenticated/app/polizas'
-      path: '/app/polizas'
-      fullPath: '/app/polizas'
-      preLoaderRoute: typeof AuthenticatedAppPolizasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/nomina-personal': {
-      id: '/_authenticated/app/nomina-personal'
-      path: '/app/nomina-personal'
-      fullPath: '/app/nomina-personal'
-      preLoaderRoute: typeof AuthenticatedAppNominaPersonalRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/nomina': {
-      id: '/_authenticated/app/nomina'
-      path: '/app/nomina'
-      fullPath: '/app/nomina'
-      preLoaderRoute: typeof AuthenticatedAppNominaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/importar-legacy': {
-      id: '/_authenticated/app/importar-legacy'
-      path: '/app/importar-legacy'
-      fullPath: '/app/importar-legacy'
-      preLoaderRoute: typeof AuthenticatedAppImportarLegacyRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/importar': {
-      id: '/_authenticated/app/importar'
-      path: '/app/importar'
-      fullPath: '/app/importar'
-      preLoaderRoute: typeof AuthenticatedAppImportarRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/flujo-efectivo': {
-      id: '/_authenticated/app/flujo-efectivo'
-      path: '/app/flujo-efectivo'
-      fullPath: '/app/flujo-efectivo'
-      preLoaderRoute: typeof AuthenticatedAppFlujoEfectivoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/exportar': {
-      id: '/_authenticated/app/exportar'
-      path: '/app/exportar'
-      fullPath: '/app/exportar'
-      preLoaderRoute: typeof AuthenticatedAppExportarRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/empleados': {
-      id: '/_authenticated/app/empleados'
-      path: '/app/empleados'
-      fullPath: '/app/empleados'
-      preLoaderRoute: typeof AuthenticatedAppEmpleadosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/declaraciones': {
-      id: '/_authenticated/app/declaraciones'
-      path: '/app/declaraciones'
-      fullPath: '/app/declaraciones'
-      preLoaderRoute: typeof AuthenticatedAppDeclaracionesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/cuentas': {
-      id: '/_authenticated/app/cuentas'
-      path: '/app/cuentas'
-      fullPath: '/app/cuentas'
-      preLoaderRoute: typeof AuthenticatedAppCuentasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/configuracion': {
-      id: '/_authenticated/app/configuracion'
-      path: '/app/configuracion'
-      fullPath: '/app/configuracion'
-      preLoaderRoute: typeof AuthenticatedAppConfiguracionRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/cobranza': {
-      id: '/_authenticated/app/cobranza'
-      path: '/app/cobranza'
-      fullPath: '/app/cobranza'
-      preLoaderRoute: typeof AuthenticatedAppCobranzaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/balanza': {
-      id: '/_authenticated/app/balanza'
-      path: '/app/balanza'
-      fullPath: '/app/balanza'
-      preLoaderRoute: typeof AuthenticatedAppBalanzaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/balance': {
-      id: '/_authenticated/app/balance'
-      path: '/app/balance'
-      fullPath: '/app/balance'
-      preLoaderRoute: typeof AuthenticatedAppBalanceRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/asistencias': {
-      id: '/_authenticated/app/asistencias'
-      path: '/app/asistencias'
-      fullPath: '/app/asistencias'
-      preLoaderRoute: typeof AuthenticatedAppAsistenciasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/usuarios': {
-      id: '/_authenticated/admin/usuarios'
-      path: '/usuarios'
-      fullPath: '/admin/usuarios'
-      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/solicitudes': {
-      id: '/_authenticated/admin/solicitudes'
-      path: '/solicitudes'
-      fullPath: '/admin/solicitudes'
-      preLoaderRoute: typeof AuthenticatedAdminSolicitudesRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/facturapi': {
-      id: '/_authenticated/admin/facturapi'
-      path: '/facturapi'
-      fullPath: '/admin/facturapi'
-      preLoaderRoute: typeof AuthenticatedAdminFacturapiRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/declaraciones': {
-      id: '/_authenticated/admin/declaraciones'
-      path: '/declaraciones'
-      fullPath: '/admin/declaraciones'
-      preLoaderRoute: typeof AuthenticatedAdminDeclaracionesRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/consumo': {
-      id: '/_authenticated/admin/consumo'
-      path: '/consumo'
-      fullPath: '/admin/consumo'
-      preLoaderRoute: typeof AuthenticatedAdminConsumoRouteImport
+    '/_authenticated/admin/clientes': {
+      id: '/_authenticated/admin/clientes'
+      path: '/clientes'
+      fullPath: '/admin/clientes'
+      preLoaderRoute: typeof AuthenticatedAdminClientesRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/cobranza': {
@@ -856,81 +702,186 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCobranzaRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/admin/clientes': {
-      id: '/_authenticated/admin/clientes'
-      path: '/clientes'
-      fullPath: '/admin/clientes'
-      preLoaderRoute: typeof AuthenticatedAdminClientesRouteImport
+    '/_authenticated/admin/consumo': {
+      id: '/_authenticated/admin/consumo'
+      path: '/consumo'
+      fullPath: '/admin/consumo'
+      preLoaderRoute: typeof AuthenticatedAdminConsumoRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/app/sua/': {
-      id: '/_authenticated/app/sua/'
-      path: '/'
-      fullPath: '/app/sua/'
-      preLoaderRoute: typeof AuthenticatedAppSuaIndexRouteImport
-      parentRoute: typeof AuthenticatedAppSuaRoute
+    '/_authenticated/admin/declaraciones': {
+      id: '/_authenticated/admin/declaraciones'
+      path: '/declaraciones'
+      fullPath: '/admin/declaraciones'
+      preLoaderRoute: typeof AuthenticatedAdminDeclaracionesRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/app/sua/patrones': {
-      id: '/_authenticated/app/sua/patrones'
-      path: '/patrones'
-      fullPath: '/app/sua/patrones'
-      preLoaderRoute: typeof AuthenticatedAppSuaPatronesRouteImport
-      parentRoute: typeof AuthenticatedAppSuaRoute
+    '/_authenticated/admin/facturapi': {
+      id: '/_authenticated/admin/facturapi'
+      path: '/facturapi'
+      fullPath: '/admin/facturapi'
+      preLoaderRoute: typeof AuthenticatedAdminFacturapiRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/app/sua/pagos': {
-      id: '/_authenticated/app/sua/pagos'
-      path: '/pagos'
-      fullPath: '/app/sua/pagos'
-      preLoaderRoute: typeof AuthenticatedAppSuaPagosRouteImport
-      parentRoute: typeof AuthenticatedAppSuaRoute
+    '/_authenticated/admin/solicitudes': {
+      id: '/_authenticated/admin/solicitudes'
+      path: '/solicitudes'
+      fullPath: '/admin/solicitudes'
+      preLoaderRoute: typeof AuthenticatedAdminSolicitudesRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/app/sua/movimientos': {
-      id: '/_authenticated/app/sua/movimientos'
-      path: '/movimientos'
-      fullPath: '/app/sua/movimientos'
-      preLoaderRoute: typeof AuthenticatedAppSuaMovimientosRouteImport
-      parentRoute: typeof AuthenticatedAppSuaRoute
+    '/_authenticated/admin/usuarios': {
+      id: '/_authenticated/admin/usuarios'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/app/sua/mensuales': {
-      id: '/_authenticated/app/sua/mensuales'
-      path: '/mensuales'
-      fullPath: '/app/sua/mensuales'
-      preLoaderRoute: typeof AuthenticatedAppSuaMensualesRouteImport
-      parentRoute: typeof AuthenticatedAppSuaRoute
-    }
-    '/_authenticated/app/sua/importar': {
-      id: '/_authenticated/app/sua/importar'
-      path: '/importar'
-      fullPath: '/app/sua/importar'
-      preLoaderRoute: typeof AuthenticatedAppSuaImportarRouteImport
-      parentRoute: typeof AuthenticatedAppSuaRoute
-    }
-    '/_authenticated/app/sua/bimestres': {
-      id: '/_authenticated/app/sua/bimestres'
-      path: '/bimestres'
-      fullPath: '/app/sua/bimestres'
-      preLoaderRoute: typeof AuthenticatedAppSuaBimestresRouteImport
-      parentRoute: typeof AuthenticatedAppSuaRoute
-    }
-    '/_authenticated/app/facturacion/productos': {
-      id: '/_authenticated/app/facturacion/productos'
-      path: '/app/facturacion/productos'
-      fullPath: '/app/facturacion/productos'
-      preLoaderRoute: typeof AuthenticatedAppFacturacionProductosRouteImport
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/app'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/app/facturacion/facturas': {
-      id: '/_authenticated/app/facturacion/facturas'
-      path: '/app/facturacion/facturas'
-      fullPath: '/app/facturacion/facturas'
-      preLoaderRoute: typeof AuthenticatedAppFacturacionFacturasRouteImport
+    '/_authenticated/app/asistencias': {
+      id: '/_authenticated/app/asistencias'
+      path: '/app/asistencias'
+      fullPath: '/app/asistencias'
+      preLoaderRoute: typeof AuthenticatedAppAsistenciasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/app/facturacion/configuracion': {
-      id: '/_authenticated/app/facturacion/configuracion'
-      path: '/app/facturacion/configuracion'
-      fullPath: '/app/facturacion/configuracion'
-      preLoaderRoute: typeof AuthenticatedAppFacturacionConfiguracionRouteImport
+    '/_authenticated/app/balance': {
+      id: '/_authenticated/app/balance'
+      path: '/app/balance'
+      fullPath: '/app/balance'
+      preLoaderRoute: typeof AuthenticatedAppBalanceRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/balanza': {
+      id: '/_authenticated/app/balanza'
+      path: '/app/balanza'
+      fullPath: '/app/balanza'
+      preLoaderRoute: typeof AuthenticatedAppBalanzaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/cobranza': {
+      id: '/_authenticated/app/cobranza'
+      path: '/app/cobranza'
+      fullPath: '/app/cobranza'
+      preLoaderRoute: typeof AuthenticatedAppCobranzaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/configuracion': {
+      id: '/_authenticated/app/configuracion'
+      path: '/app/configuracion'
+      fullPath: '/app/configuracion'
+      preLoaderRoute: typeof AuthenticatedAppConfiguracionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/cuentas': {
+      id: '/_authenticated/app/cuentas'
+      path: '/app/cuentas'
+      fullPath: '/app/cuentas'
+      preLoaderRoute: typeof AuthenticatedAppCuentasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/declaraciones': {
+      id: '/_authenticated/app/declaraciones'
+      path: '/app/declaraciones'
+      fullPath: '/app/declaraciones'
+      preLoaderRoute: typeof AuthenticatedAppDeclaracionesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/empleados': {
+      id: '/_authenticated/app/empleados'
+      path: '/app/empleados'
+      fullPath: '/app/empleados'
+      preLoaderRoute: typeof AuthenticatedAppEmpleadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/exportar': {
+      id: '/_authenticated/app/exportar'
+      path: '/app/exportar'
+      fullPath: '/app/exportar'
+      preLoaderRoute: typeof AuthenticatedAppExportarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/flujo-efectivo': {
+      id: '/_authenticated/app/flujo-efectivo'
+      path: '/app/flujo-efectivo'
+      fullPath: '/app/flujo-efectivo'
+      preLoaderRoute: typeof AuthenticatedAppFlujoEfectivoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/importar': {
+      id: '/_authenticated/app/importar'
+      path: '/app/importar'
+      fullPath: '/app/importar'
+      preLoaderRoute: typeof AuthenticatedAppImportarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/importar-legacy': {
+      id: '/_authenticated/app/importar-legacy'
+      path: '/app/importar-legacy'
+      fullPath: '/app/importar-legacy'
+      preLoaderRoute: typeof AuthenticatedAppImportarLegacyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/nomina': {
+      id: '/_authenticated/app/nomina'
+      path: '/app/nomina'
+      fullPath: '/app/nomina'
+      preLoaderRoute: typeof AuthenticatedAppNominaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/nomina-personal': {
+      id: '/_authenticated/app/nomina-personal'
+      path: '/app/nomina-personal'
+      fullPath: '/app/nomina-personal'
+      preLoaderRoute: typeof AuthenticatedAppNominaPersonalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/polizas': {
+      id: '/_authenticated/app/polizas'
+      path: '/app/polizas'
+      fullPath: '/app/polizas'
+      preLoaderRoute: typeof AuthenticatedAppPolizasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/resultados': {
+      id: '/_authenticated/app/resultados'
+      path: '/app/resultados'
+      fullPath: '/app/resultados'
+      preLoaderRoute: typeof AuthenticatedAppResultadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/sua': {
+      id: '/_authenticated/app/sua'
+      path: '/app/sua'
+      fullPath: '/app/sua'
+      preLoaderRoute: typeof AuthenticatedAppSuaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/clientes/$orgId': {
+      id: '/_authenticated/admin/clientes/$orgId'
+      path: '/$orgId'
+      fullPath: '/admin/clientes/$orgId'
+      preLoaderRoute: typeof AuthenticatedAdminClientesOrgIdRouteImport
+      parentRoute: typeof AuthenticatedAdminClientesRoute
+    }
+    '/_authenticated/admin/organizaciones/$orgId': {
+      id: '/_authenticated/admin/organizaciones/$orgId'
+      path: '/organizaciones/$orgId'
+      fullPath: '/admin/organizaciones/$orgId'
+      preLoaderRoute: typeof AuthenticatedAdminOrganizacionesOrgIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/app/facturacion/clientes': {
+      id: '/_authenticated/app/facturacion/clientes'
+      path: '/app/facturacion/clientes'
+      fullPath: '/app/facturacion/clientes'
+      preLoaderRoute: typeof AuthenticatedAppFacturacionClientesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/app/facturacion/complementos': {
@@ -940,33 +891,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppFacturacionComplementosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/app/facturacion/clientes': {
-      id: '/_authenticated/app/facturacion/clientes'
-      path: '/app/facturacion/clientes'
-      fullPath: '/app/facturacion/clientes'
-      preLoaderRoute: typeof AuthenticatedAppFacturacionClientesRouteImport
+    '/_authenticated/app/facturacion/configuracion': {
+      id: '/_authenticated/app/facturacion/configuracion'
+      path: '/app/facturacion/configuracion'
+      fullPath: '/app/facturacion/configuracion'
+      preLoaderRoute: typeof AuthenticatedAppFacturacionConfiguracionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/organizaciones/$orgId': {
-      id: '/_authenticated/admin/organizaciones/$orgId'
-      path: '/organizaciones/$orgId'
-      fullPath: '/admin/organizaciones/$orgId'
-      preLoaderRoute: typeof AuthenticatedAdminOrganizacionesOrgIdRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
+    '/_authenticated/app/facturacion/facturas': {
+      id: '/_authenticated/app/facturacion/facturas'
+      path: '/app/facturacion/facturas'
+      fullPath: '/app/facturacion/facturas'
+      preLoaderRoute: typeof AuthenticatedAppFacturacionFacturasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/clientes/$orgId': {
-      id: '/_authenticated/admin/clientes/$orgId'
-      path: '/$orgId'
-      fullPath: '/admin/clientes/$orgId'
-      preLoaderRoute: typeof AuthenticatedAdminClientesOrgIdRouteImport
-      parentRoute: typeof AuthenticatedAdminClientesRoute
+    '/_authenticated/app/facturacion/productos': {
+      id: '/_authenticated/app/facturacion/productos'
+      path: '/app/facturacion/productos'
+      fullPath: '/app/facturacion/productos'
+      preLoaderRoute: typeof AuthenticatedAppFacturacionProductosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/app/sua/mensuales/': {
-      id: '/_authenticated/app/sua/mensuales/'
+    '/_authenticated/app/sua/': {
+      id: '/_authenticated/app/sua/'
       path: '/'
-      fullPath: '/app/sua/mensuales/'
-      preLoaderRoute: typeof AuthenticatedAppSuaMensualesIndexRouteImport
-      parentRoute: typeof AuthenticatedAppSuaMensualesRoute
+      fullPath: '/app/sua/'
+      preLoaderRoute: typeof AuthenticatedAppSuaIndexRouteImport
+      parentRoute: typeof AuthenticatedAppSuaRoute
+    }
+    '/_authenticated/app/sua/bimestres': {
+      id: '/_authenticated/app/sua/bimestres'
+      path: '/bimestres'
+      fullPath: '/app/sua/bimestres'
+      preLoaderRoute: typeof AuthenticatedAppSuaBimestresRouteImport
+      parentRoute: typeof AuthenticatedAppSuaRoute
+    }
+    '/_authenticated/app/sua/importar': {
+      id: '/_authenticated/app/sua/importar'
+      path: '/importar'
+      fullPath: '/app/sua/importar'
+      preLoaderRoute: typeof AuthenticatedAppSuaImportarRouteImport
+      parentRoute: typeof AuthenticatedAppSuaRoute
+    }
+    '/_authenticated/app/sua/mensuales': {
+      id: '/_authenticated/app/sua/mensuales'
+      path: '/mensuales'
+      fullPath: '/app/sua/mensuales'
+      preLoaderRoute: typeof AuthenticatedAppSuaMensualesRouteImport
+      parentRoute: typeof AuthenticatedAppSuaRoute
+    }
+    '/_authenticated/app/sua/movimientos': {
+      id: '/_authenticated/app/sua/movimientos'
+      path: '/movimientos'
+      fullPath: '/app/sua/movimientos'
+      preLoaderRoute: typeof AuthenticatedAppSuaMovimientosRouteImport
+      parentRoute: typeof AuthenticatedAppSuaRoute
+    }
+    '/_authenticated/app/sua/pagos': {
+      id: '/_authenticated/app/sua/pagos'
+      path: '/pagos'
+      fullPath: '/app/sua/pagos'
+      preLoaderRoute: typeof AuthenticatedAppSuaPagosRouteImport
+      parentRoute: typeof AuthenticatedAppSuaRoute
+    }
+    '/_authenticated/app/sua/patrones': {
+      id: '/_authenticated/app/sua/patrones'
+      path: '/patrones'
+      fullPath: '/app/sua/patrones'
+      preLoaderRoute: typeof AuthenticatedAppSuaPatronesRouteImport
+      parentRoute: typeof AuthenticatedAppSuaRoute
     }
     '/_authenticated/app/sua/bimestres/': {
       id: '/_authenticated/app/sua/bimestres/'
@@ -975,19 +968,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSuaBimestresIndexRouteImport
       parentRoute: typeof AuthenticatedAppSuaBimestresRoute
     }
-    '/_authenticated/app/sua/mensuales/$id': {
-      id: '/_authenticated/app/sua/mensuales/$id'
-      path: '/$id'
-      fullPath: '/app/sua/mensuales/$id'
-      preLoaderRoute: typeof AuthenticatedAppSuaMensualesIdRouteImport
-      parentRoute: typeof AuthenticatedAppSuaMensualesRoute
-    }
     '/_authenticated/app/sua/bimestres/$id': {
       id: '/_authenticated/app/sua/bimestres/$id'
       path: '/$id'
       fullPath: '/app/sua/bimestres/$id'
       preLoaderRoute: typeof AuthenticatedAppSuaBimestresIdRouteImport
       parentRoute: typeof AuthenticatedAppSuaBimestresRoute
+    }
+    '/_authenticated/app/sua/mensuales/': {
+      id: '/_authenticated/app/sua/mensuales/'
+      path: '/'
+      fullPath: '/app/sua/mensuales/'
+      preLoaderRoute: typeof AuthenticatedAppSuaMensualesIndexRouteImport
+      parentRoute: typeof AuthenticatedAppSuaMensualesRoute
+    }
+    '/_authenticated/app/sua/mensuales/$id': {
+      id: '/_authenticated/app/sua/mensuales/$id'
+      path: '/$id'
+      fullPath: '/app/sua/mensuales/$id'
+      preLoaderRoute: typeof AuthenticatedAppSuaMensualesIdRouteImport
+      parentRoute: typeof AuthenticatedAppSuaMensualesRoute
     }
   }
 }

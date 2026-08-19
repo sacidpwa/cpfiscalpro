@@ -8,7 +8,7 @@ async function assertAdmin(userId: string) {
   if (!data) throw new Error("Forbidden");
 }
 
-const STATUS = ["pendiente", "pagada", "vencida", "cancelada"] as const;
+const STATUS = ["pendiente", "generada", "pagada", "vencida", "cancelada"] as const;
 const METHODS = ["transferencia", "efectivo", "stripe", "tarjeta", "otro"] as const;
 const STRIPE_SURCHARGE = 0.2;
 
@@ -118,6 +118,7 @@ export const adminUpsertPlan = createServerFn({ method: "POST" })
         organizationId: z.string().uuid(),
         plan_name: z.string().trim().min(1).max(80),
         mensualidad: z.number().min(0),
+        billing_type: z.enum(["fijo", "modulos"]).default("modulos"),
         dia_pago: z.number().min(1).max(28),
         fecha_inicio: z.string(),
         fecha_vencimiento: z.string().nullable().optional(),
@@ -140,6 +141,7 @@ export const adminUpsertPlan = createServerFn({ method: "POST" })
       organization_id: data.organizationId,
       plan_name: data.plan_name,
       mensualidad: data.mensualidad,
+      billing_type: data.billing_type,
       dia_pago: data.dia_pago,
       fecha_inicio: data.fecha_inicio,
       fecha_vencimiento: data.fecha_vencimiento ?? null,
@@ -186,7 +188,9 @@ export const adminGenerateInvoice = createServerFn({ method: "POST" })
       .eq("activo", true);
 
     const baseModulos = ((mods as any[]) ?? []).reduce((s, m) => s + Number(m.costo_mensual), 0);
-    const baseTotal = (Number(plan?.mensualidad ?? 0) || 0) + baseModulos;
+    const baseTotal = plan?.billing_type === 'fijo'
+      ? Number(plan?.mensualidad ?? 0)
+      : baseModulos;
     const surcharge = data.metodo === "stripe" ? baseTotal * STRIPE_SURCHARGE : 0;
     const total = baseTotal + surcharge;
 
@@ -311,7 +315,7 @@ export const adminListPendingInvoices = createServerFn({ method: "GET" })
         .select("id, reference_id, estatus, uuid_sat, pdf_path, xml_path, created_at")
         .eq("organization_id", SAC_ORG_ID)
         .eq("kind", "ingreso")
-        .is("reference_id", "not", null)
+        .not("reference_id", "is", null)
         .order("created_at", { ascending: false }),
     ]);
     if (invRes.error) throw new Error(invRes.error.message);
@@ -364,7 +368,9 @@ export const adminAutoGenerateInvoices = createServerFn({ method: "POST" })
             .eq("organization_id", plan.organization_id)
             .eq("activo", true);
           const baseModulos = ((mods as any[]) ?? []).reduce((s, m) => s + Number(m.costo_mensual), 0);
-          const total = Number(plan.mensualidad) + baseModulos;
+          const total = plan.billing_type === 'fijo'
+            ? Number(plan.mensualidad)
+            : baseModulos;
           const venc = new Date(y, m - 1, plan.dia_pago ?? 10);
           const { error: ie } = await supabaseAdmin
             .from("subscription_invoices" as any)
@@ -428,14 +434,9 @@ export const adminStampSubscriptionInvoice = createServerFn({ method: "POST" })
 
     const org = (inv as any).organizations;
     const periodo = `${inv.ejercicio}/${String(inv.mes).padStart(2, "0")}`;
-    const descripcion = `Suscripción CPFiscalPro · Periodo ${periodo}`;
-
-    const { data: plan } = await supabaseAdmin
-      .from("subscription_plans")
-      .select("plan_name")
-      .eq("organization_id", org.id)
-      .maybeSingle();
-    const planName = (plan as any)?.plan_name ?? "Suscripción";
+    const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const mesNombre = meses[(inv.mes - 1)] ?? "";
+    const descripcion = `Mensualidad correspondiente al mes de ${mesNombre} ${inv.ejercicio}`;
 
     const { key, environment } = await getSacFacturApiKey();
 
@@ -456,10 +457,10 @@ export const adminStampSubscriptionInvoice = createServerFn({ method: "POST" })
           quantity: 1,
           discount: 0,
           product: {
-            description: `${planName} · ${periodo}`,
+            description: descripcion,
             product_key: "84111506",
             unit_key: "ACT",
-            unit_name: "Servicio de suscripción",
+            unit_name: "Servicio",
             price: Number(inv.monto_total),
             taxability: "02",
             taxes: [{ type: "IVA", rate: 0.16, withholding: false }],
@@ -544,6 +545,11 @@ export const adminStampSubscriptionInvoice = createServerFn({ method: "POST" })
       console.warn("No se pudo guardar XML/PDF de factura:", e);
     }
 
+    await supabaseAdmin
+      .from("subscription_invoices" as any)
+      .update({ estatus: "generada" })
+      .eq("id", inv.id);
+
     return { ok: true, uuid, facturapi_id: fapiId, total, stampId };
   });
 
@@ -562,13 +568,26 @@ export const adminEmailSubscriptionInvoice = createServerFn({ method: "POST" })
 
     const { data: inv, error: ie } = await supabaseAdmin
       .from("subscription_invoices" as any)
-      .select("*, organizations(id, rfc, razon_social, email)")
+      .select("*, organizations(id, rfc, razon_social)")
       .eq("id", data.invoiceId)
       .single();
     if (ie || !inv) throw new Error("Factura no encontrada");
 
     const org = (inv as any).organizations;
-    const to = org.email;
+
+    const { data: member } = await (supabaseAdmin as any)
+      .from("organization_members")
+      .select("user_id")
+      .eq("organization_id", org.id)
+      .eq("role", "owner")
+      .limit(1)
+      .maybeSingle();
+    const { data: profile } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("email")
+      .eq("id", member?.user_id)
+      .maybeSingle();
+    const to = profile?.email;
     if (!to) throw new Error("El cliente no tiene email registrado");
 
     const { data: stamp } = await (supabaseAdmin as any)
@@ -620,4 +639,42 @@ export const adminEmailSubscriptionInvoice = createServerFn({ method: "POST" })
       throw new Error(`Resend ${res.status}: ${txt.slice(0, 300)}`);
     }
     return { ok: true, to };
+  });
+
+/** Admin: cancela CFDI de una factura de suscripción */
+export const adminCancelSubscriptionInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ invoiceId: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: inv, error: ie } = await supabaseAdmin
+      .from("subscription_invoices" as any)
+      .select("id, estatus")
+      .eq("id", data.invoiceId)
+      .single();
+    if (ie || !inv) throw new Error("Factura no encontrada");
+    if (inv.estatus === "cancelada") throw new Error("La factura ya está cancelada");
+
+    const { data: stamp } = await (supabaseAdmin as any)
+      .from("cfdi_stamps")
+      .select("id, facturapi_id, organization_id")
+      .eq("reference_id", inv.id)
+      .eq("kind", "ingreso")
+      .eq("estatus", "timbrado")
+      .maybeSingle();
+    if (!stamp) throw new Error("No hay CFDI timbrado para cancelar");
+
+    const { cancelCfdiStamp } = await import("@/lib/cfdi.functions");
+    await cancelCfdiStamp({ data: { stampId: stamp.id, motive: "02" } });
+
+    await supabaseAdmin
+      .from("subscription_invoices" as any)
+      .update({ estatus: "cancelada" })
+      .eq("id", inv.id);
+
+    return { ok: true };
   });
