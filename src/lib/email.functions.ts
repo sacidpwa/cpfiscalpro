@@ -30,6 +30,7 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
       subjectPrefix: z.string().max(120).optional(),
       summaryPdfBase64: z.string().optional(),
       summaryPdfFilename: z.string().optional(),
+      summaryOnly: z.boolean().optional().default(false),
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
@@ -98,7 +99,8 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
     let sent = 0, skipped = 0, failed = 0;
     const sinEmail: Array<{ name: string; numero?: string; rfc?: string }> = [];
 
-    // 1) Envío individual a cada trabajador
+    // 1) Envío individual a cada trabajador (omitir si summaryOnly)
+    if (!data.summaryOnly) {
     for (const r of receipts ?? []) {
       const empName = [r.employee?.nombre, r.employee?.apellido_paterno, r.employee?.apellido_materno]
         .filter(Boolean).join(" ");
@@ -157,6 +159,7 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
         details.push({ employee: empName, email: empEmail, status: "error", error: e.message });
       }
     }
+    } // end if (!data.summaryOnly)
 
     // 2) Correo resumen con todos los CFDI a contabilidad
     // Prioriza la configuración guardada en org_billing_config.nomina_email_to;

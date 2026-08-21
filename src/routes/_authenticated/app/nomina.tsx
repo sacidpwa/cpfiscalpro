@@ -590,6 +590,45 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
         >
           <Mail className="h-3.5 w-3.5" /> {sending ? "Enviando…" : `Enviar por correo (${timbradosCount})`}
         </button>
+
+        <button
+          onClick={async () => {
+            if (timbradosCount === 0) return;
+            if (!confirm("Se reenviará solo el correo resumen a contabilidad con todos los CFDI adjuntos. ¿Continuar?")) return;
+            setSending(true);
+            const t = toast.loading("Reenviando resumen…");
+            try {
+              const receiptsForPdf = await fetcher({ data: { periodId } });
+              const { generateNominaPDF } = await import("@/lib/nomina-pdf");
+              const pdfRes = generateNominaPDF({
+                org: { razon_social: org.razon_social, rfc: org.rfc },
+                period,
+                receipts: receiptsForPdf,
+                output: "base64",
+              }) as { filename: string; base64: string };
+
+              const res = await sendEmails({
+                data: {
+                  periodId,
+                  summaryPdfBase64: pdfRes.base64,
+                  summaryPdfFilename: pdfRes.filename,
+                  summaryOnly: true,
+                },
+              });
+              const extra = res.summarySent ? "Resumen enviado a contabilidad" : (res.summaryError ? `Resumen FALLÓ: ${res.summaryError}` : "Sin destinatarios configurados");
+              toast.success(extra, { id: t, duration: 6000 });
+            } catch (e: any) {
+              toast.error(e.message ?? "Error", { id: t });
+            } finally {
+              setSending(false);
+            }
+          }}
+          disabled={sending || timbradosCount === 0}
+          className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-50"
+          title="Reenviar solo el resumen del periodo a contabilidad"
+        >
+          <Mail className="h-3.5 w-3.5" /> Reenviar resumen
+        </button>
         {pendientes === 0 ? (
           <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
             <CheckCircle2 className="h-3.5 w-3.5" /> Todos timbrados ({timbradosCount})
