@@ -7,7 +7,7 @@ const RESEND_API = "https://api.resend.com";
 // Configuración por organización (RFC/razón social → defaults)
 const ORG_EMAIL_DEFAULTS: Record<string, { fromEmail: string; summaryTo: string[]; summaryCc: string[]; summarySubject?: string; signature: string; logoUrl: string }> = {
   "HELIX PROTEINAS SA DE CV": {
-    fromEmail: "helixgestion@sacid.site",
+    fromEmail: "helixproteinas@sacid.site",
     summaryTo: ["labra_laross@hotmail.com", "helixproteinas@gmail.com"],
     summaryCc: [],
     summarySubject: "Resumen del periodo {numero}",
