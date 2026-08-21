@@ -413,7 +413,7 @@ async function stampPayrollReceiptInternal({
               curp: emp.curp,
               num_seguridad_social: emp.nss || "00000000000",
               fecha_inicio_rel_laboral: emp.fecha_alta,
-              antiguedad: calcAntiguedad(emp.fecha_alta, period.fecha_fin),
+              antiguedad: true,
               tipo_contrato: "01",
               tipo_regimen: "02",
               tipo_jornada: "01",
