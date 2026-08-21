@@ -125,6 +125,124 @@ function Empleados() {
     await del({ data: { id } });
     qc.invalidateQueries({ queryKey: ["employees", org.id] });
   }
+  function descargarPlantillaAlta() {
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Formato de Alta de Empleado</title>
+<style>
+  @page { margin: 1.5cm; size: letter; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 20px; }
+  h1 { text-align: center; font-size: 16px; margin-bottom: 4px; }
+  .subtitle { text-align: center; font-size: 11px; color: #555; margin-bottom: 16px; }
+  .section { border: 1px solid #ccc; border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
+  .section-title { background: #f3f4f6; padding: 6px 12px; font-weight: bold; font-size: 12px; border-bottom: 1px solid #ccc; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+  .field { padding: 8px 12px; border-bottom: 1px solid #eee; border-right: 1px solid #eee; }
+  .field.w2 { grid-column: span 2; }
+  .field.w3 { grid-column: span 3; }
+  .field-label { font-size: 9px; text-transform: uppercase; color: #888; margin-bottom: 4px; letter-spacing: 0.5px; }
+  .field-value { min-height: 18px; border-bottom: 1px dashed #ccc; padding: 2px 0; }
+  .checklist { padding: 10px 12px; }
+  .checklist h3 { font-size: 11px; margin-bottom: 6px; }
+  .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .check-item { display: flex; align-items: center; gap: 6px; }
+  .checkbox { width: 12px; height: 12px; border: 1px solid #999; border-radius: 2px; display: inline-block; }
+  .footer { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; font-size: 10px; }
+  .sign-line { border-top: 1px solid #333; margin-top: 40px; padding-top: 4px; text-align: center; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+<h1>FORMATO DE ALTA DE EMPLEADO</h1>
+<p class="subtitle">Completa todos los campos y entrega junto con los documentos adjuntos</p>
+
+<div class="section">
+  <div class="section-title">DATOS PERSONALES</div>
+  <div class="fields">
+    <div class="field w2"><div class="field-label">Nombre(s) completos</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Fecha de nacimiento</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Apellido paterno</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Apellido materno</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Sexo (M/F)</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">RFC</div><div class="field-value" style="font-family:monospace">&nbsp;</div></div>
+    <div class="field"><div class="field-label">CURP</div><div class="field-value" style="font-family:monospace">&nbsp;</div></div>
+    <div class="field"><div class="field-label">NSS (Número de Seguridad Social)</div><div class="field-value" style="font-family:monospace">&nbsp;</div></div>
+    <div class="field w3"><div class="field-label">Domicilio particular (calle, número, colonia, CP, municipio, estado)</div><div class="field-value" style="min-height:30px">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Teléfono</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Correo electrónico</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Estado civil</div><div class="field-value">&nbsp;</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">DATOS LABORALES</div>
+  <div class="fields">
+    <div class="field"><div class="field-label">Número de empleado</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Fecha de alta</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Puesto</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Departamento</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Salario diario</div><div class="field-value">$ &nbsp;</div></div>
+    <div class="field"><div class="field-label">Periodicidad de pago</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Tipo de contrato</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Jornada laboral</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Riesgo del puesto (1-5)</div><div class="field-value">&nbsp;</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">DATOS BANCARIOS / FORMA DE PAGO</div>
+  <div class="fields">
+    <div class="field"><div class="field-label">Forma de pago</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">Banco</div><div class="field-value">&nbsp;</div></div>
+    <div class="field"><div class="field-label">CLABE interbancaria</div><div class="field-value" style="font-family:monospace">&nbsp;</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">DOCUMENTOS ENTREGADOS (marcar con ✓)</div>
+  <div class="checklist">
+    <div class="check-grid">
+      <div class="check-item"><span class="checkbox"></span> Identificación oficial (INE/IFE)</div>
+      <div class="check-item"><span class="checkbox"></span> RFC (Constancia de situación fiscal)</div>
+      <div class="check-item"><span class="checkbox"></span> CURP</div>
+      <div class="check-item"><span class="checkbox"></span> Comprobante de domicilio</div>
+      <div class="check-item"><span class="checkbox"></span> Acta de nacimiento</div>
+      <div class="check-item"><span class="checkbox"></span> Número de Seguridad Social</div>
+      <div class="check-item"><span class="checkbox"></span> CURP del INFONAVIT (crédito)</div>
+      <div class="check-item"><span class="checkbox"></span> Fotografía infantil (tamaño infantil)</div>
+      <div class="check-item"><span class="checkbox"></span> Estado de cuenta bancario (CLABE)</div>
+      <div class="check-item"><span class="checkbox"></span> Título o certificado académico</div>
+      <div class="check-item"><span class="checkbox"></span> Examen médico</div>
+      <div class="check-item"><span class="checkbox"></span> Otro: _______________</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div>
+    <div class="sign-line">Firma del empleado</div>
+  </div>
+  <div>
+    <div class="sign-line">Firma del patrón / Representante</div>
+  </div>
+  <div>
+    <div class="sign-line">Fecha de recepción</div>
+  </div>
+</div>
+
+</body>
+</html>`;
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 400);
+    }
+  }
 
   async function handleDrop(files: FileList) {
     setDragging(false);
@@ -202,7 +320,10 @@ function Empleados() {
         </div>
       )}
       <PageHeader title="Empleados" description="Plantilla activa para nómina"
-        actions={<button onClick={() => { setEditing(null); setOpen(true); }} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"><Plus className="h-4 w-4"/>Nuevo</button>} />
+        actions={<>
+          <button onClick={descargarPlantillaAlta} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm hover:bg-secondary"><FileText className="h-4 w-4"/>Plantilla de alta</button>
+          <button onClick={() => { setEditing(null); setOpen(true); }} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"><Plus className="h-4 w-4"/>Nuevo</button>
+        </>} />
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2">
