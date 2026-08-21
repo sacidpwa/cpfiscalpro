@@ -5,8 +5,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const RESEND_API = "https://api.resend.com";
 
 // Configuración por organización (RFC/razón social → defaults)
-const ORG_EMAIL_DEFAULTS: Record<string, { fromEmail: string; summaryTo: string[]; summaryCc: string[]; summarySubject?: string; signature: string; logoUrl: string }> = {
-  "HELIX PROTEINAS SA DE CV": {
+const ORG_EMAIL_DEFAULTS: Array<{ match: string; fromEmail: string; summaryTo: string[]; summaryCc: string[]; summarySubject?: string; signature: string; logoUrl: string }> = [
+  {
+    match: "HELIX",
     fromEmail: "helixproteinas@sacid.site",
     summaryTo: ["labra_laross@hotmail.com", "helixproteinas@gmail.com"],
     summaryCc: [],
@@ -14,7 +15,11 @@ const ORG_EMAIL_DEFAULTS: Record<string, { fromEmail: string; summaryTo: string[
     signature: "SACID",
     logoUrl: "https://conta-nexus-mexico.lovable.app/__l5e/assets-v1/0d4fb48b-32f8-40e7-97ff-665a663bf28b/sacid-logo.png",
   },
-};
+];
+
+function findOrgDefaults(orgKey: string) {
+  return ORG_EMAIL_DEFAULTS.find((d) => orgKey.includes(d.match));
+}
 
 export const emailPeriodReceipts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -50,7 +55,7 @@ export const emailPeriodReceipts = createServerFn({ method: "POST" })
       .eq("id", period.organization_id).single();
 
     const orgKey = (org?.razon_social || "").toUpperCase().trim();
-    const defaults = ORG_EMAIL_DEFAULTS[orgKey];
+    const defaults = findOrgDefaults(orgKey);
 
     // Leer configuración de correo desde org_billing_config
     const { data: billingRow } = await (supabaseAdmin as any)
@@ -348,7 +353,7 @@ export const emailStampedComplement = createServerFn({ method: "POST" })
       .eq("id", stamp.organization_id).single();
 
     const orgKey = (org?.razon_social || "").toUpperCase().trim();
-    const defaults = ORG_EMAIL_DEFAULTS[orgKey];
+    const defaults = findOrgDefaults(orgKey);
 
     const { data: billingRow } = await (supabaseAdmin as any)
       .from("org_billing_config")
@@ -452,7 +457,7 @@ export const emailStampedBatch = createServerFn({ method: "POST" })
       .eq("id", orgId).single();
 
     const orgKey = (org?.razon_social || "").toUpperCase().trim();
-    const defaults = ORG_EMAIL_DEFAULTS[orgKey];
+    const defaults = findOrgDefaults(orgKey);
 
     const { data: billingRow } = await (supabaseAdmin as any)
       .from("org_billing_config")
@@ -563,7 +568,7 @@ export const emailSinglePayrollReceipt = createServerFn({ method: "POST" })
       .eq("id", receipt.organization_id).single();
 
     const orgKey = (org?.razon_social || "").toUpperCase().trim();
-    const defaults = ORG_EMAIL_DEFAULTS[orgKey];
+    const defaults = findOrgDefaults(orgKey);
 
     const { data: billingRow } = await (supabaseAdmin as any)
       .from("org_billing_config")
