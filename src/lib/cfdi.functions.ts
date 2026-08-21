@@ -51,11 +51,12 @@ function estadoFromCP(cp: string): string {
 }
 
 function calcAntiguedad(fechaAlta: string | null | undefined, fechaRef: string): string {
-  if (!fechaAlta) return "P0D";
+  if (!fechaAlta) return "P1D";
   const altaStr = fechaAlta.includes("T") ? fechaAlta.split("T")[0] : fechaAlta;
   const refStr = fechaRef.includes("T") ? fechaRef.split("T")[0] : fechaRef;
   const alta = new Date(altaStr + "T00:00:00Z");
   const ref = new Date(refStr + "T00:00:00Z");
+  if (isNaN(alta.getTime()) || isNaN(ref.getTime())) return "P1D";
   let years = ref.getUTCFullYear() - alta.getUTCFullYear();
   let months = ref.getUTCMonth() - alta.getUTCMonth();
   let days = ref.getUTCDate() - alta.getUTCDate();
@@ -68,6 +69,8 @@ function calcAntiguedad(fechaAlta: string | null | undefined, fechaRef: string):
     years--;
     months += 12;
   }
+  if (years < 0) return "P1D";
+  if (years === 0 && months === 0 && days === 0) return "P1D";
   return `P${years}Y${months}M${days}D`;
 }
 
