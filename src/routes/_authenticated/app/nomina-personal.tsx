@@ -27,11 +27,9 @@ function NominaPersonal() {
   const [diasPagados, setDiasPagados] = useState<number>(1);
   const [periodicidad, setPeriodicidad] = useState<"quincenal" | "mensual">("mensual");
   const [percepciones, setPercepciones] = useState<Percepcion[]>([
-    { clave: "023", descripcion: "Vacaciones Proporcionales 2025 (Art. 76 LFT)", importe_gravado: 0, importe_exento: 2061.14 },
-    { clave: "023", descripcion: "Prima Vacacional 2025 25% (Art. 80 LFT)", importe_gravado: 0, importe_exento: 515.28 },
-    { clave: "023", descripcion: "Aguinaldo Proporcional 2026 (Art. 87 LFT)", importe_gravado: 0, importe_exento: 2887.15 },
-    { clave: "023", descripcion: "Vacaciones Proporcionales 2026 (Art. 76 LFT)", importe_gravado: 0, importe_exento: 2309.72 },
-    { clave: "023", descripcion: "Prima Vacacional 2026 25% (Art. 80 LFT)", importe_gravado: 0, importe_exento: 577.43 },
+    { clave: "023", descripcion: "Aguinaldo Proporcional 2026 (Art. 87 LFT)", importe_gravado: 0, importe_exento: 2951.88 },
+    { clave: "023", descripcion: "Vacaciones Proporcionales 2026 (Art. 76 LFT)", importe_gravado: 0, importe_exento: 761.27 },
+    { clave: "023", descripcion: "Prima Vacacional 2026 25% (Art. 80 LFT)", importe_gravado: 0, importe_exento: 190.32 },
   ]);
   const [deducciones, setDeducciones] = useState<Deduccion[]>([]);
   const [incluirImss, setIncluirImss] = useState(false);
@@ -46,15 +44,15 @@ function NominaPersonal() {
     queryFn: () => empleadosFn({ data: { organizationId: org.id } }),
   });
 
-  // Auto-seleccionar Alejandro Becerril si existe en la lista
+  // Auto-seleccionar Manuel Alejandro si existe en la lista
   useEffect(() => {
     if (!empleadoId && (empleados as any[]).length > 0) {
-      const alejandro = (empleados as any[]).find(
-        (e: any) => e.nombre?.toLowerCase().includes("alejandro") && e.apellido_paterno?.toLowerCase().includes("becerril")
+      const manuel = (empleados as any[]).find(
+        (e: any) => e.nombre?.toLowerCase().includes("manuel") && e.apellido_paterno?.toLowerCase().includes("lopez")
       );
-      if (alejandro) {
-        setEmpleadoId(alejandro.id);
-        setSalarioDiario(Number(alejandro.salario_diario) || 315.04);
+      if (manuel) {
+        setEmpleadoId(manuel.id);
+        setSalarioDiario(Number(manuel.salario_diario) || 315.04);
       }
     }
   }, [empleados, empleadoId]);
