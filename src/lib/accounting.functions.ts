@@ -393,8 +393,9 @@ export const getBalanza = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: accts } = await supabase
       .from("accounts")
-      .select("id, codigo, nombre, naturaleza")
+      .select("id, codigo, nombre, naturaleza, acumulativa, nivel")
       .eq("organization_id", data.organizationId)
+      .eq("activa", true)
       .order("codigo");
 
     const { data: lines, error } = await supabase
@@ -408,21 +409,97 @@ export const getBalanza = createServerFn({ method: "POST" })
       .neq("entry.estatus", "cancelada");
     if (error) throw new Error(error.message);
 
-    const map: Record<string, { cargo: number; abono: number }> = {};
+    // Leaf-level cargo/abono from journal_lines
+    const leafMap: Record<string, { cargo: number; abono: number }> = {};
     (lines ?? []).forEach((l: any) => {
       const k = l.account_id;
-      if (!map[k]) map[k] = { cargo: 0, abono: 0 };
-      map[k].cargo += Number(l.cargo);
-      map[k].abono += Number(l.abono);
+      if (!leafMap[k]) leafMap[k] = { cargo: 0, abono: 0 };
+      leafMap[k].cargo += Number(l.cargo);
+      leafMap[k].abono += Number(l.abono);
     });
 
-    return (accts ?? [])
-      .map((a) => {
-        const v = map[a.id] ?? { cargo: 0, abono: 0 };
+    // Build parent map: each leaf account -> its closest acumulativa parent using nivel
+    const parentMap: Record<string, string> = {}; // childId -> parentCodigo
+    const acumulativas = (accts ?? []).filter((a: any) => a.acumulativa);
+    for (const a of accts ?? []) {
+      if (a.acumulativa) continue;
+      const targetNivel = (a.nivel ?? 1) - 1;
+      let bestParent: any = null;
+      let bestPrefix = 0;
+      for (const p of acumulativas) {
+        if ((p.nivel ?? 0) !== targetNivel) continue;
+        let commonLen = 0;
+        const maxLen = Math.min(a.codigo.length, p.codigo.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (a.codigo[i] === p.codigo[i]) commonLen++;
+          else break;
+        }
+        if (commonLen > bestPrefix) {
+          bestPrefix = commonLen;
+          bestParent = p;
+        }
+      }
+      if (bestParent) parentMap[a.id] = bestParent.codigo;
+    }
+
+    // Compute cargo/abono per parent by aggregating leaf descendants (transitive)
+    const parentAgg: Record<string, { cargo: number; abono: number }> = {};
+    for (const [childId, parentCodigo] of Object.entries(parentMap)) {
+      const v = leafMap[childId];
+      if (!v) continue;
+      if (!parentAgg[parentCodigo]) parentAgg[parentCodigo] = { cargo: 0, abono: 0 };
+      parentAgg[parentCodigo].cargo += v.cargo;
+      parentAgg[parentCodigo].abono += v.abono;
+    }
+    // Propagate: nivel N parent totals up to nivel N-1 parent
+    for (let pass = 0; pass < 5; pass++) {
+      let changed = false;
+      for (const a of acumulativas) {
+        const agg = parentAgg[a.codigo];
+        if (!agg || (agg.cargo === 0 && agg.abono === 0)) continue;
+        const targetNivel = (a.nivel ?? 1) - 1;
+        if (targetNivel < 1) continue;
+        let bestParent: any = null;
+        let bestPrefix = 0;
+        for (const p of acumulativas) {
+          if ((p.nivel ?? 0) !== targetNivel) continue;
+          let commonLen = 0;
+          const maxLen = Math.min(a.codigo.length, p.codigo.length);
+          for (let i = 0; i < maxLen; i++) {
+            if (a.codigo[i] === p.codigo[i]) commonLen++;
+            else break;
+          }
+          if (commonLen > bestPrefix) { bestPrefix = commonLen; bestParent = p; }
+        }
+        if (bestParent) {
+          if (!parentAgg[bestParent.codigo]) parentAgg[bestParent.codigo] = { cargo: 0, abono: 0 };
+          parentAgg[bestParent.codigo].cargo += agg.cargo;
+          parentAgg[bestParent.codigo].abono += agg.abono;
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+
+    // Compute cargo/abono for all accounts (leaf direct, parent aggregated)
+    const result: any[] = [];
+    for (const a of accts ?? []) {
+      if (a.acumulativa) {
+        const agg = parentAgg[a.codigo] ?? { cargo: 0, abono: 0 };
+        const saldo = a.naturaleza === "deudora" ? agg.cargo - agg.abono : agg.abono - agg.cargo;
+        if (agg.cargo > 0 || agg.abono > 0) {
+          result.push({ ...a, cargo: agg.cargo, abono: agg.abono, saldo });
+        }
+      } else {
+        const v = leafMap[a.id] ?? { cargo: 0, abono: 0 };
         const saldo = a.naturaleza === "deudora" ? v.cargo - v.abono : v.abono - v.cargo;
-        return { ...a, cargo: v.cargo, abono: v.abono, saldo };
-      })
-      .filter((r) => r.cargo > 0 || r.abono > 0);
+        if (v.cargo > 0 || v.abono > 0) {
+          result.push({ ...a, cargo: v.cargo, abono: v.abono, saldo });
+        }
+      }
+    }
+
+    return result;
   });
 
 // ============ GET SALDOS ACUMULADOS (helper) ============

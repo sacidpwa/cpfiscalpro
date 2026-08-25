@@ -72,9 +72,9 @@ function Balanza() {
               {isLoading ? <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Cargando…</td></tr>
                 : !data?.length ? <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Sin movimientos en el periodo.</td></tr>
                 : data.map((r: any) => (
-                  <tr key={r.id} className="hover:bg-secondary/30">
-                    <td className="px-3 py-2 font-mono text-xs">{r.codigo}</td>
-                    <td className="px-3 py-2">{r.nombre}</td>
+                  <tr key={r.id} className={`hover:bg-secondary/30 ${r.acumulativa ? 'bg-secondary/20 font-semibold' : ''}`}>
+                    <td className="px-3 py-2 font-mono text-xs" style={{ paddingLeft: `${8 + (r.nivel ?? 1) * 12}px` }}>{r.codigo}</td>
+                    <td className="px-3 py-2" style={{ paddingLeft: `${8 + (r.nivel ?? 1) * 12}px` }}>{r.nombre}</td>
                     <td className="px-3 py-2 text-right text-money">{fmtMoney(r.cargo)}</td>
                     <td className="px-3 py-2 text-right text-money">{fmtMoney(r.abono)}</td>
                     <td className="px-3 py-2 text-right text-money font-semibold">{fmtMoney(r.saldo)}</td>
