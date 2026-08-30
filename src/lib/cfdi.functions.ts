@@ -151,12 +151,56 @@ export const listReceiptStamps = createServerFn({ method: "POST" })
     if (!ids.length) return [] as any[];
     const { data: stamps, error } = await (context.supabase as any)
       .from("cfdi_stamps")
-      .select("id, reference_id, uuid_sat, estatus, ambiente, error_message, created_at, xml_path, pdf_path")
+      .select("id, reference_id, uuid_sat, estatus, ambiente, error_message, created_at, xml_path, pdf_path, facturapi_id")
       .eq("kind", "nomina")
       .in("reference_id", ids)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return stamps ?? [];
+  });
+
+export const syncStampStatuses = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ periodId: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: receipts } = await supabase
+      .from("payroll_receipts")
+      .select("id")
+      .eq("payroll_period_id", data.periodId);
+    const ids = (receipts ?? []).map((r: any) => r.id);
+    if (!ids.length) return { synced: 0 };
+    const { data: stamps } = await (supabaseAdmin as any)
+      .from("cfdi_stamps")
+      .select("id, facturapi_id, estatus")
+      .eq("kind", "nomina")
+      .in("reference_id", ids)
+      .eq("estatus", "timbrado")
+      .not("facturapi_id", "is", null);
+    if (!stamps?.length) return { synced: 0 };
+    const { key } = await getApiKey(stamps[0].organization_id ?? (await supabase.from("payroll_receipts").select("organization_id").in("id", ids).limit(1).single()).data?.organization_id);
+    let synced = 0;
+    for (const s of stamps as any[]) {
+      try {
+        const res = await fetch(`${FACTURAPI_BASE}/invoices/${s.facturapi_id}`, {
+          headers: { Authorization: `Bearer ${key}` },
+        });
+        if (!res.ok) continue;
+        const inv: any = await res.json();
+        const fapiStatus: string = inv?.status ?? "";
+        if (fapiStatus === "canceled" || fapiStatus === "pending_cancelation") {
+          await (supabaseAdmin as any)
+            .from("cfdi_stamps")
+            .update({ estatus: "cancelado", error_message: `Sincronizado desde FacturAPI · ${fapiStatus}` })
+            .eq("id", s.id);
+          synced++;
+        }
+      } catch {}
+    }
+    return { synced };
   });
 
 export const stampPayrollReceipt = createServerFn({ method: "POST" })

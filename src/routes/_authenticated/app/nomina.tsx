@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { listPayrollPeriods, createPayrollPeriod, runPayroll, getPeriodReceipts, deletePayrollPeriod, updatePayrollPeriod, recalculateReceipt } from "@/lib/payroll.functions";
-import { stampPayrollReceipt, stampPayrollPeriodBatch, listReceiptStamps, getCfdiDownloadUrl, cancelCfdiStamp, reconcilePeriodWithFacturapi, listFacturapiPeriodInvoices, getCancellationReceipt, cancelFacturapiInvoice } from "@/lib/cfdi.functions";
+import { stampPayrollReceipt, stampPayrollPeriodBatch, listReceiptStamps, getCfdiDownloadUrl, cancelCfdiStamp, reconcilePeriodWithFacturapi, listFacturapiPeriodInvoices, getCancellationReceipt, cancelFacturapiInvoice, syncStampStatuses } from "@/lib/cfdi.functions";
 import { getBillingConfig } from "@/lib/billing.functions";
 import { emailPeriodReceipts, listPeriodEmailLogs, emailSinglePayrollReceipt } from "@/lib/email.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
@@ -233,6 +233,8 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
   const getCfg = useServerFn(getBillingConfig);
   const sendOne = useServerFn(emailSinglePayrollReceipt);
   const cancelStamp = useServerFn(cancelCfdiStamp);
+  const acuseFn = useServerFn(getCancellationReceipt);
+  const syncStamps = useServerFn(syncStampStatuses);
   const recalcOne = useServerFn(recalculateReceipt);
   const reconcile = useServerFn(reconcilePeriodWithFacturapi);
   const [sending, setSending] = useState(false);
@@ -244,6 +246,9 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
   const [reconcileRes, setReconcileRes] = useState<any[] | null>(null);
   const [showFapiList, setShowFapiList] = useState(false);
   const [downloadingZip, setDownloadingZip] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [downloadingAcuse, setDownloadingAcuse] = useState<string | null>(null);
+  const [syncingStamps, setSyncingStamps] = useState(false);
 
   const { data, isLoading } = useQuery({ queryKey: ["receipts", periodId], queryFn: () => fetcher({ data: { periodId } }) });
   const { data: stamps } = useQuery({
@@ -336,6 +341,65 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
         URL.revokeObjectURL(objUrl);
       }, 1000);
     } catch (e: any) { toast.error(e.message ?? "Error"); }
+  }
+
+  async function cancelarCfdi(r: any) {
+    const s = stampMap.get(r.id);
+    if (!s || s.estatus !== "timbrado") return;
+    const empName = [r.employee?.nombre, r.employee?.apellido_paterno].filter(Boolean).join(" ") || "este empleado";
+    if (!confirm(`Cancelar el CFDI de ${empName}?\n\nUUID: ${s.uuid_sat}\nEsto marcará el CFDI como cancelado en FacturAPI/SAT (motivo 02).\nNo se re-timbrará ni recalculará.`)) return;
+    setCancellingId(r.id);
+    const t = toast.loading(`Cancelando CFDI de ${empName}…`);
+    try {
+      await cancelStamp({ data: { stampId: s.id, motive: "02" } });
+      toast.success(`CFDI cancelado · UUID ${String(s.uuid_sat ?? "").slice(0, 8)}…`, { id: t });
+      qc.invalidateQueries({ queryKey: ["stamps", periodId] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al cancelar", { id: t, duration: 8000 });
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
+  async function descargarAcuse(stampRow: any, kind: "xml" | "pdf") {
+    if (!stampRow?.facturapi_id) { toast.error("No hay facturapi_id asociado"); return; }
+    setDownloadingAcuse(stampRow.id + kind);
+    const t = toast.loading(`Descargando acuse ${kind.toUpperCase()}…`);
+    try {
+      const res = await acuseFn({ data: { organizationId: org.id, facturapiId: stampRow.facturapi_id, kind } });
+      if (res.notReady || !res.base64) {
+        toast.info(res.message ?? "Acuse aún no disponible", { id: t });
+        return;
+      }
+      const bin = atob(res.base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: res.mime });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = res.filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success("Acuse descargado", { id: t });
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al descargar acuse", { id: t, duration: 8000 });
+    } finally {
+      setDownloadingAcuse(null);
+    }
+  }
+
+  async function sincronizarStamps() {
+    setSyncingStamps(true);
+    const t = toast.loading("Sincronizando estatus con FacturAPI…");
+    try {
+      const res = await syncStamps({ data: { periodId } });
+      toast.success(`${res.synced} CFDI(s) sincronizado(s)`, { id: t });
+      qc.invalidateQueries({ queryKey: ["stamps", periodId] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al sincronizar", { id: t });
+    } finally {
+      setSyncingStamps(false);
+    }
   }
 
   async function enviarUno(receiptId: string, empName: string, empEmail?: string) {
@@ -629,6 +693,14 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
         >
           <Mail className="h-3.5 w-3.5" /> Reenviar resumen
         </button>
+        <button
+          onClick={sincronizarStamps}
+          disabled={syncingStamps}
+          className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-50"
+          title="Sincronizar estatus de CFDIs con FacturAPI (detecta cancelaciones hechas fuera de la app)"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${syncingStamps ? "animate-spin" : ""}`} /> {syncingStamps ? "Sincronizando…" : "Sync FacturAPI"}
+        </button>
         {pendientes === 0 ? (
           <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
             <CheckCircle2 className="h-3.5 w-3.5" /> Todos timbrados ({timbradosCount})
@@ -696,6 +768,28 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
                     )}
                     <button onClick={() => recalcular(r)} disabled={recalcing === r.id} title="Cancelar CFDI, calcular nuevamente y re-timbrar" className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-400">
                       <RefreshCw className={`h-3 w-3 ${recalcing === r.id ? "animate-spin" : ""}`}/> {actionLabel(true)}
+                    </button>
+                    <button onClick={() => cancelarCfdi(r)} disabled={cancellingId === r.id} title="Cancelar CFDI (sin recalcular)" className="inline-flex items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-xs text-destructive hover:bg-destructive/20 disabled:opacity-50">
+                      <Trash2 className={`h-3 w-3 ${cancellingId === r.id ? "animate-spin" : ""}`}/> Cancelar
+                    </button>
+                  </>
+                ) : s?.estatus === "cancelado" ? (
+                  <>
+                    <span title={s.uuid_sat} className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] bg-destructive/10 text-destructive">
+                      <AlertCircle className="h-3 w-3" /> cancelado
+                    </span>
+                    {s.facturapi_id && (
+                      <>
+                        <button onClick={() => descargarAcuse(s, "pdf")} disabled={downloadingAcuse === s.id + "pdf"} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary disabled:opacity-50">
+                          <FileDown className="h-3 w-3"/> Acuse PDF
+                        </button>
+                        <button onClick={() => descargarAcuse(s, "xml")} disabled={downloadingAcuse === s.id + "xml"} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary disabled:opacity-50">
+                          <Download className="h-3 w-3"/> Acuse XML
+                        </button>
+                      </>
+                    )}
+                    <button onClick={() => timbrarMut.mutate(r.id)} disabled={timbrarMut.isPending} className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary disabled:opacity-50">
+                      <Stamp className="h-3 w-3"/> Timbrar
                     </button>
                   </>
                 ) : s?.estatus === "error" ? (
@@ -793,6 +887,29 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
                         )}
                         <button onClick={() => recalcular(r)} disabled={recalcing === r.id} title="Cancelar CFDI, calcular nuevamente y re-timbrar" className="ml-1 inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-400">
                           <RefreshCw className={`h-3 w-3 ${recalcing === r.id ? "animate-spin" : ""}`}/> {actionLabel(true)}
+                        </button>
+                        <button onClick={() => cancelarCfdi(r)} disabled={cancellingId === r.id} title="Cancelar CFDI (sin recalcular)" className="inline-flex items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-xs text-destructive hover:bg-destructive/20 disabled:opacity-50">
+                          <Trash2 className={`h-3 w-3 ${cancellingId === r.id ? "animate-spin" : ""}`}/> Cancelar
+                        </button>
+                      </div>
+                    ) : s?.estatus === "cancelado" ? (
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button onClick={() => setPreviewId(r.id)} className="rounded p-1 hover:bg-secondary" title="Vista previa del recibo"><Eye className="h-3.5 w-3.5" /></button>
+                        <span title={s.uuid_sat} className="inline-flex items-center gap-1 text-xs text-destructive">
+                          <AlertCircle className="h-3.5 w-3.5" /> cancelado
+                        </span>
+                        {s.facturapi_id && (
+                          <>
+                            <button onClick={() => descargarAcuse(s, "pdf")} disabled={downloadingAcuse === s.id + "pdf"} title="Descargar acuse de cancelación PDF" className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary disabled:opacity-50">
+                              <FileDown className="h-3 w-3" /> Acuse PDF
+                            </button>
+                            <button onClick={() => descargarAcuse(s, "xml")} disabled={downloadingAcuse === s.id + "xml"} title="Descargar acuse de cancelación XML" className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary disabled:opacity-50">
+                              <Download className="h-3 w-3" /> Acuse XML
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => timbrarMut.mutate(r.id)} disabled={timbrarMut.isPending} title="Volver a timbrar este recibo" className="inline-flex items-center gap-1 rounded border bg-card px-2 py-0.5 text-xs hover:bg-secondary disabled:opacity-50">
+                          <Stamp className="h-3 w-3" /> Timbrar
                         </button>
                       </div>
                     ) : s?.estatus === "error" ? (
