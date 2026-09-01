@@ -304,18 +304,19 @@ export const getAccountMovements = createServerFn({ method: "POST" })
       .eq("entry.organization_id", data.organizationId)
       .gte("entry.fecha", startMonth)
       .lte("entry.fecha", endMonth)
-      .neq("entry.estatus", "cancelada")
-      .order("entry.fecha", { ascending: true });
+      .neq("entry.estatus", "cancelada");
 
-    const movements = (lines ?? []).map((l: any) => ({
-      fecha: l.entry?.fecha,
-      tipo: l.entry?.tipo,
-      numero: l.entry?.numero,
-      polizaConcepto: l.entry?.concepto,
-      lineaConcepto: l.concepto,
-      cargo: Number(l.cargo ?? 0),
-      abono: Number(l.abono ?? 0),
-    }));
+    const movements = (lines ?? [])
+      .map((l: any) => ({
+        fecha: l.entry?.fecha,
+        tipo: l.entry?.tipo,
+        numero: l.entry?.numero,
+        polizaConcepto: l.entry?.concepto,
+        lineaConcepto: l.concepto,
+        cargo: Number(l.cargo ?? 0),
+        abono: Number(l.abono ?? 0),
+      }))
+      .sort((a, b) => (a.fecha ?? "").localeCompare(b.fecha ?? ""));
 
     return { accountName: acct.nombre, movements };
   });

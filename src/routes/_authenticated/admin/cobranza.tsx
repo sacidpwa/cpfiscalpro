@@ -304,7 +304,7 @@ function Cobranza() {
                               Timbrar
                             </button>
                           )}
-                          {inv.estatus !== "pagada" && inv.estatus !== "cancelada" && !cfdiExists && (
+                          {inv.estatus !== "pagada" && inv.estatus !== "cancelada" && (
                             <button
                               onClick={() => handleMarkPaid(inv)}
                               className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-secondary"
