@@ -273,3 +273,49 @@ export const getDashboardDetail = createServerFn({ method: "POST" })
     rows.sort((a, b) => Math.abs(b.monto) - Math.abs(a.monto));
     return rows;
   });
+
+export const getAccountMovements = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({
+      organizationId: z.string().uuid(),
+      mes: z.number().int().min(1).max(13),
+      ejercicio: z.number().int(),
+      accountCodigo: z.string().min(1),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const startMonth = `${data.ejercicio}-${String(data.mes).padStart(2, "0")}-01`;
+    const endMonth = new Date(data.ejercicio, data.mes, 0).toISOString().slice(0, 10);
+
+    const { data: acct } = await supabase
+      .from("accounts")
+      .select("id, nombre")
+      .eq("organization_id", data.organizationId)
+      .eq("codigo", data.accountCodigo)
+      .maybeSingle();
+    if (!acct) return { accountName: "", movements: [] };
+
+    const { data: lines } = await supabase
+      .from("journal_lines")
+      .select("id, cargo, abono, concepto, entry:journal_entries!inner(id, fecha, tipo, numero, concepto, estatus)")
+      .eq("account_id", acct.id)
+      .eq("entry.organization_id", data.organizationId)
+      .gte("entry.fecha", startMonth)
+      .lte("entry.fecha", endMonth)
+      .neq("entry.estatus", "cancelada")
+      .order("entry.fecha", { ascending: true });
+
+    const movements = (lines ?? []).map((l: any) => ({
+      fecha: l.entry?.fecha,
+      tipo: l.entry?.tipo,
+      numero: l.entry?.numero,
+      polizaConcepto: l.entry?.concepto,
+      lineaConcepto: l.concepto,
+      cargo: Number(l.cargo ?? 0),
+      abono: Number(l.abono ?? 0),
+    }));
+
+    return { accountName: acct.nombre, movements };
+  });
