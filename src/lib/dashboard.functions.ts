@@ -210,3 +210,66 @@ export const getDashboardKpis = createServerFn({ method: "POST" })
       totalLineas: lineasCount.count ?? 0,
     };
   });
+
+export const getDashboardDetail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({
+      organizationId: z.string().uuid(),
+      mes: z.number().int().min(1).max(13),
+      ejercicio: z.number().int(),
+      tipo: z.enum(["ingresos", "egresos", "utilidad", "nomina"]),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const startMonth = `${data.ejercicio}-${String(data.mes).padStart(2, "0")}-01`;
+    const endMonth = new Date(data.ejercicio, data.mes, 0).toISOString().slice(0, 10);
+
+    const { data: accts } = await supabase
+      .from("accounts")
+      .select("id, codigo, nombre, naturaleza, acumulativa, nivel")
+      .eq("organization_id", data.organizationId)
+      .eq("activa", true)
+      .order("codigo");
+    const naturalezaMap: Record<string, string> = {};
+    const acctNameMap: Record<string, string> = {};
+    const acctNivelMap: Record<string, number> = {};
+    const acumulativaSet: Set<string> = new Set();
+    (accts ?? []).forEach((a: any) => {
+      naturalezaMap[a.codigo] = a.naturaleza;
+      acctNameMap[a.codigo] = a.nombre;
+      acctNivelMap[a.codigo] = a.nivel ?? 1;
+      if (a.acumulativa) acumulativaSet.add(a.codigo);
+    });
+
+    const [saldosMes, saldosAnt] = await Promise.all([
+      getSaldos(supabase, data.organizationId, data.ejercicio, data.mes),
+      data.mes > 1 ? getSaldos(supabase, data.organizationId, data.ejercicio, data.mes - 1) : Promise.resolve(null),
+    ]);
+
+    const rows: { codigo: string; nombre: string; nivel: number; monto: number }[] = [];
+    for (const [codigo, saldo] of Object.entries(saldosMes)) {
+      if (acumulativaSet.has(codigo)) continue;
+      const d = codigo.replace(/^0+/, "")[0];
+      const nat = naturalezaMap[codigo] ?? "deudora";
+      const signedSaldo = nat === "deudora" ? -saldo : saldo;
+      const signedAnt = saldosAnt
+        ? nat === "deudora" ? -(saldosAnt[codigo] ?? 0) : (saldosAnt[codigo] ?? 0)
+        : 0;
+      const per = signedSaldo - signedAnt;
+
+      let match = false;
+      if (data.tipo === "ingresos" && d === "4") match = true;
+      if (data.tipo === "egresos" && (d === "5" || d === "6")) match = true;
+      if (data.tipo === "utilidad" && (d === "4" || d === "5" || d === "6" || d === "7")) match = true;
+      if (data.tipo === "nomina" && codigo.startsWith("61000010000000000000")) match = true;
+
+      if (match && Math.abs(per) > 0.005) {
+        rows.push({ codigo, nombre: acctNameMap[codigo] ?? "", nivel: acctNivelMap[codigo] ?? 1, monto: per });
+      }
+    }
+
+    rows.sort((a, b) => Math.abs(b.monto) - Math.abs(a.monto));
+    return rows;
+  });

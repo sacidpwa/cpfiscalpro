@@ -2,12 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { getDashboardKpis } from "@/lib/dashboard.functions";
+import { getDashboardKpis, getDashboardDetail } from "@/lib/dashboard.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, KpiCard } from "@/components/app-ui";
 import { fmtMoney } from "@/lib/format";
 import { BUILD_HASH, BUILD_TIME } from "@/lib/version";
-import { Users, FileText, TrendingUp, Wallet, Calendar, AlertCircle } from "lucide-react";
+import { Users, FileText, TrendingUp, Wallet, Calendar, AlertCircle, X } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -40,14 +40,25 @@ export const Route = createFileRoute("/_authenticated/app/")({
 function Dashboard() {
   const org = useRequireOrg();
   const fn = useServerFn(getDashboardKpis);
+  const detailFn = useServerFn(getDashboardDetail);
   const hoy = new Date();
   const mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
   const [ejercicio, setEjercicio] = useState(mesPasado.getFullYear());
   const [mes, setMes] = useState(mesPasado.getMonth() + 1);
+  const [detailTipo, setDetailTipo] = useState<"ingresos" | "egresos" | "utilidad" | "nomina" | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["kpis", org.id, ejercicio, mes],
     queryFn: () => fn({ data: { organizationId: org.id, mes, ejercicio } }),
   });
+  const { data: detailData, isLoading: detailLoading } = useQuery({
+    queryKey: ["kpi-detail", org.id, ejercicio, mes, detailTipo],
+    queryFn: () => detailFn({ data: { organizationId: org.id, mes, ejercicio, tipo: detailTipo! } }),
+    enabled: !!detailTipo,
+  });
+
+  function openDetail(tipo: "ingresos" | "egresos" | "utilidad" | "nomina") {
+    setDetailTipo(tipo);
+  }
 
   return (
     <div>
@@ -84,11 +95,13 @@ function Dashboard() {
             label={`Ingresos — ${meses[mes - 1]}`}
             value={data ? fmtMoney(data.ingresos) : "—"}
             hint="Cuentas 4xxx (ER)"
+            onClick={() => openDetail("ingresos")}
           />
           <KpiCard
             label={`Egresos — ${meses[mes - 1]}`}
             value={data ? fmtMoney(data.egresos) : "—"}
             hint={`Costos ${data ? fmtMoney(data.costos) : "—"} · Gastos ${data ? fmtMoney(data.gastos) : "—"}`}
+            onClick={() => openDetail("egresos")}
           />
           <KpiCard
             label={`Utilidad — ${meses[mes - 1]}`}
@@ -101,11 +114,13 @@ function Dashboard() {
                   }
                 : undefined
             }
+            onClick={() => openDetail("utilidad")}
           />
           <KpiCard
             label={`Nómina — ${meses[mes - 1]}`}
             value={data ? fmtMoney(data.nominaMes) : "—"}
             hint="Cuenta 6100-001 (Sueldos)"
+            onClick={() => openDetail("nomina")}
           />
         </div>
 
@@ -235,6 +250,55 @@ function Dashboard() {
           v{BUILD_HASH} · {BUILD_TIME.slice(0, 10)}
         </div>
       </div>
+
+      {/* Detail modal */}
+      {detailTipo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDetailTipo(null)}>
+          <div className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-lg bg-card shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <h3 className="font-semibold capitalize">{detailTipo === "egresos" ? "Egresos (Costos + Gastos)" : detailTipo} — {meses[mes - 1]} {ejercicio}</h3>
+                <p className="text-xs text-muted-foreground">Detalle por cuenta contable</p>
+              </div>
+              <button onClick={() => setDetailTipo(null)} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="overflow-auto p-4" style={{ maxHeight: "calc(80vh - 70px)" }}>
+              {detailLoading ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Cargando…</p>
+              ) : !detailData?.length ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sin movimientos en este periodo.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                      <th className="p-2">Código</th>
+                      <th className="p-2">Cuenta</th>
+                      <th className="p-2 text-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detailData.map((row: any) => (
+                      <tr key={row.codigo} className="border-b hover:bg-secondary/30">
+                        <td className="p-2 font-mono text-xs" style={{ paddingLeft: `${8 + (row.nivel ?? 1) * 12}px` }}>{row.codigo}</td>
+                        <td className="p-2" style={{ paddingLeft: `${8 + (row.nivel ?? 1) * 12}px` }}>{row.nombre}</td>
+                        <td className={`p-2 text-right font-medium tabular-nums ${row.monto >= 0 ? "text-money" : "text-destructive"}`}>{fmtMoney(row.monto)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="border-t-2 bg-secondary/30 font-semibold">
+                    <tr>
+                      <td className="p-2" colSpan={2}>Total</td>
+                      <td className={`p-2 text-right tabular-nums ${detailData.reduce((s: number, r: any) => s + r.monto, 0) >= 0 ? "text-money" : "text-destructive"}`}>
+                        {fmtMoney(detailData.reduce((s: number, r: any) => s + r.monto, 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

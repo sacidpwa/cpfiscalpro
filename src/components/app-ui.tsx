@@ -54,14 +54,22 @@ export function KpiCard({
   value,
   hint,
   trend,
+  onClick,
 }: {
   label: string;
   value: ReactNode;
   hint?: string;
   trend?: { label: string; positive?: boolean };
+  onClick?: () => void;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border bg-card p-5">
+    <div
+      className={`min-w-0 rounded-lg border bg-card p-5 ${onClick ? "cursor-pointer transition-colors hover:bg-secondary/50" : ""}`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined}
+    >
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-2 text-2xl font-semibold tabular-nums">{value}</div>
       <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
