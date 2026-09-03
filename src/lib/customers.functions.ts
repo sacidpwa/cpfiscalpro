@@ -29,7 +29,7 @@ const baseSchema = z.object({
   notas: z.string().max(1000).optional().nullable(),
   activo: z.boolean().default(true),
   facturacion_mensual_activo: z.boolean().default(false),
-  facturacion_mensual_producto_id: z.string().uuid().optional().nullable(),
+  facturacion_mensual_producto_id: z.string().uuid().optional().nullable().or(z.literal("")).transform(v => v === "" ? null : v),
   facturacion_mensual_descripcion: z.string().max(255).optional().nullable(),
 });
 
