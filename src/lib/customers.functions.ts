@@ -187,10 +187,13 @@ function parseConceptos(xml: string): Array<{
   unidad: string | null;
   precio_unitario: number;
   objeto_imp: string;
+  iva_tasa: number;
+  ret_iva_tasa: number;
+  ret_isr_tasa: number;
 }> {
   const out: Array<any> = [];
   // Captura cada tag <Concepto ...> (auto-cerrado o con cuerpo)
-  const re = /<(?:\w+:)?Concepto\b[^>]*?(?:\/>|>)/gi;
+  const re = /<(?:\w+:)?Concepto\b[^>]*?(?:\/>|>[\s\S]*?<\/(?:\w+:)?Concepto>)/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(xml)) !== null) {
     const tag = m[0];
@@ -198,6 +201,27 @@ function parseConceptos(xml: string): Array<{
     const desc = getAttrFromTag(tag, "Descripcion") || "";
     const claveUnidad = getAttrFromTag(tag, "ClaveUnidad") || "H87";
     if (!claveProd || !desc) continue;
+
+    let iva_tasa = 0, ret_iva_tasa = 0, ret_isr_tasa = 0;
+
+    // Parse IVA trasladado
+    const trasladoMatch = tag.match(/<(?:\w+:)?Traslado\b[^>]*Impuesto="002"[^>]*TasaOCuota="([^"]+)"/i)
+      ?? tag.match(/<(?:\w+:)?Traslado\b[^>]*TasaOCuota="([^"]+)"[^>]*Impuesto="002"/i);
+    if (trasladoMatch) iva_tasa = Number(trasladoMatch[1]) || 0;
+
+    // Parse retenciones
+    const retMatches = tag.match(/<(?:\w+:)?Retencion\b[^>]*Impuesto="([^"]+)"[^>]*TasaOCuota="([^"]+)"/gi)
+      ?? tag.match(/<(?:\w+:)?Retencion\b[^>]*TasaOCuota="([^"]+)"[^>]*Impuesto="([^"]+)"/gi) as RegExpExecArray[] | null;
+    if (retMatches) {
+      for (const rm of retMatches) {
+        const imp = rm[0].match(/Impuesto="(\d+)"/)?.[1];
+        const tasa = rm[0].match(/TasaOCuota="([^"]+)"/)?.[1];
+        if (!imp || !tasa) continue;
+        if (imp === "002") ret_iva_tasa = Number(tasa) || 0;
+        if (imp === "001") ret_isr_tasa = Number(tasa) || 0;
+      }
+    }
+
     out.push({
       clave_prod_serv: claveProd,
       no_identificacion: getAttrFromTag(tag, "NoIdentificacion"),
@@ -206,6 +230,9 @@ function parseConceptos(xml: string): Array<{
       unidad: getAttrFromTag(tag, "Unidad"),
       precio_unitario: Number(getAttrFromTag(tag, "ValorUnitario") || 0) || 0,
       objeto_imp: getAttrFromTag(tag, "ObjetoImp") || "02",
+      iva_tasa,
+      ret_iva_tasa,
+      ret_isr_tasa,
     });
   }
   return out;
@@ -313,6 +340,10 @@ export const importCustomersFromCfdiXml = createServerFn({ method: "POST" })
               unidad: c.unidad,
               precio_unitario: c.precio_unitario,
               objeto_imp: c.objeto_imp,
+              iva_tipo: "tasa",
+              iva_tasa: c.iva_tasa,
+              ret_iva_tasa: c.ret_iva_tasa,
+              ret_isr_tasa: c.ret_isr_tasa,
               times_used: 1,
               last_used_at: new Date().toISOString(),
             });

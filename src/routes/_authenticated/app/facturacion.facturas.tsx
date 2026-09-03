@@ -392,6 +392,8 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
     unidad: "Unidad de servicio",
     precio_unitario: "",
     iva_tasa: "0.16",
+    ret_iva_tasa: "0",
+    ret_isr_tasa: "0",
     tipo: "servicio" as "producto" | "servicio",
   });
   const [savingNewItem, setSavingNewItem] = useState(false);
@@ -444,7 +446,7 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
   }
 
   const totals = useMemo(() => {
-    let subtotal = 0, iva = 0;
+    let subtotal = 0, iva = 0, retIva = 0, retIsr = 0;
     for (const it of items) {
       const p: any = resolveSource(it.ref);
       if (!p) continue;
@@ -453,8 +455,10 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
       subtotal += sub;
       const ivaTipo = p.iva_tipo ?? "tasa";
       if (ivaTipo === "tasa") iva += sub * Number(p.iva_tasa);
+      retIva += sub * Number(p.ret_iva_tasa ?? 0);
+      retIsr += sub * Number(p.ret_isr_tasa ?? 0);
     }
-    return { subtotal, iva, total: subtotal + iva };
+    return { subtotal, iva, retIva, retIsr, total: subtotal + iva - retIva - retIsr };
   }, [items, products, customerItems]);
 
   // Opciones de claves SAT usadas con este cliente + catálogo
@@ -538,6 +542,8 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
         unidad: "Unidad de servicio",
         precio_unitario: "",
         iva_tasa: "0.16",
+        ret_iva_tasa: "0",
+        ret_isr_tasa: "0",
         tipo: "servicio",
       });
     } else if (patch.ref !== undefined && patch.ref !== "new") {
@@ -567,6 +573,8 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
           moneda,
           iva_tasa: Number(f.iva_tasa),
           iva_tipo: "tasa",
+          ret_iva_tasa: Number(f.ret_iva_tasa),
+          ret_isr_tasa: Number(f.ret_isr_tasa),
           objeto_imp: "02",
           activo: true,
         },
@@ -789,6 +797,14 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
                                 <span className="text-[10px] font-medium text-muted-foreground">IVA (%)</span>
                                 <input type="number" step="0.01" min="0" max="1" value={newItemForm.iva_tasa} onChange={(e) => setNewItemForm((s) => ({ ...s, iva_tasa: e.target.value }))} placeholder="0.16" className="w-full rounded border bg-background px-1.5 py-1 text-right font-mono text-xs outline-none focus:ring-2 focus:ring-ring" />
                               </label>
+                              <label className="block">
+                                <span className="text-[10px] font-medium text-muted-foreground">Ret. IVA (%)</span>
+                                <input type="number" step="0.01" min="0" max="1" value={newItemForm.ret_iva_tasa} onChange={(e) => setNewItemForm((s) => ({ ...s, ret_iva_tasa: e.target.value }))} placeholder="0" className="w-full rounded border bg-background px-1.5 py-1 text-right font-mono text-xs outline-none focus:ring-2 focus:ring-ring" />
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] font-medium text-muted-foreground">Ret. ISR (%)</span>
+                                <input type="number" step="0.01" min="0" max="1" value={newItemForm.ret_isr_tasa} onChange={(e) => setNewItemForm((s) => ({ ...s, ret_isr_tasa: e.target.value }))} placeholder="0" className="w-full rounded border bg-background px-1.5 py-1 text-right font-mono text-xs outline-none focus:ring-2 focus:ring-ring" />
+                              </label>
                               <div className="flex items-end gap-2">
                                 <button
                                   type="button"
@@ -815,7 +831,9 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
 
         <div className="mt-4 ml-auto grid w-full max-w-xs grid-cols-2 gap-1 text-sm">
           <span className="text-muted-foreground">Subtotal</span><span className="text-right font-mono">{fmtMoney(totals.subtotal)}</span>
-          <span className="text-muted-foreground">IVA</span><span className="text-right font-mono">{fmtMoney(totals.iva)}</span>
+          <span className="text-muted-foreground">IVA trasladado</span><span className="text-right font-mono">{fmtMoney(totals.iva)}</span>
+          {totals.retIva > 0 && <><span className="text-muted-foreground">Ret. IVA</span><span className="text-right font-mono text-destructive">-{fmtMoney(totals.retIva)}</span></>}
+          {totals.retIsr > 0 && <><span className="text-muted-foreground">Ret. ISR</span><span className="text-right font-mono text-destructive">-{fmtMoney(totals.retIsr)}</span></>}
           <span className="font-semibold">Total</span><span className="text-right font-mono font-semibold">{fmtMoney(totals.total)}</span>
         </div>
 
