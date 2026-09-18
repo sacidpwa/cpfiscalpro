@@ -299,14 +299,14 @@ export const getAccountMovements = createServerFn({ method: "POST" })
 
     const { data: lines } = await supabase
       .from("journal_lines")
-      .select("id, cargo, abono, concepto, fecha, entry:journal_entries!inner(id, fecha, tipo, numero, concepto, estatus)")
+      .select("id, cargo, abono, concepto, entry:journal_entries!inner(id, fecha, tipo, numero, concepto, estatus)")
       .eq("account_id", acct.id)
       .eq("entry.organization_id", data.organizationId)
       .neq("entry.estatus", "cancelada");
 
     const movements = (lines ?? [])
       .map((l: any) => ({
-        fecha: l.fecha || l.entry?.fecha,
+        fecha: l.entry?.fecha,
         tipo: l.entry?.tipo,
         numero: l.entry?.numero,
         polizaConcepto: l.entry?.concepto,
@@ -314,11 +314,8 @@ export const getAccountMovements = createServerFn({ method: "POST" })
         cargo: Number(l.cargo ?? 0),
         abono: Number(l.abono ?? 0),
       }))
-      .filter((m) => {
-        if (!m.fecha) return true;
-        return m.fecha >= startMonth && m.fecha <= endMonth;
-      })
-      .sort((a, b) => (a.fecha ?? "").localeCompare(b.fecha ?? ""));
+      .filter((m) => m.fecha >= startMonth && m.fecha <= endMonth)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
     return { accountName: acct.nombre, movements };
   });
