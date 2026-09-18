@@ -275,7 +275,7 @@ function Dashboard() {
                 <h3 className="font-semibold capitalize">
                   {selectedCodigo ? `${movData?.accountName ?? selectedCodigo}` : detailTipo === "egresos" ? "Egresos (Costos + Gastos)" : detailTipo} — {meses[mes - 1]} {ejercicio}
                 </h3>
-                <p className="text-xs text-muted-foreground">{selectedCodigo ? "Pólizas que afectan esta cuenta" : "Detalle por cuenta contable · clic para ver origen"}</p>
+                <p className="text-xs text-muted-foreground">{selectedCodigo ? "Todos los movimientos de esta cuenta" : "Detalle por cuenta contable · clic para ver origen"}</p>
               </div>
               <button onClick={() => { setDetailTipo(null); setSelectedCodigo(null); }} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
             </div>

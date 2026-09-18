@@ -302,8 +302,6 @@ export const getAccountMovements = createServerFn({ method: "POST" })
       .select("id, cargo, abono, concepto, entry:journal_entries!inner(id, fecha, tipo, numero, concepto, estatus)")
       .eq("account_id", acct.id)
       .eq("entry.organization_id", data.organizationId)
-      .gte("entry.fecha", startMonth)
-      .lte("entry.fecha", endMonth)
       .neq("entry.estatus", "cancelada");
 
     const movements = (lines ?? [])
