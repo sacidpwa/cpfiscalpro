@@ -306,8 +306,7 @@ export const getAccountMovements = createServerFn({ method: "POST" })
 
     const movements = (lines ?? [])
       .map((l: any) => ({
-        fecha: l.entry?.fecha,
-        fechaReal: l.fecha || l.entry?.fecha,
+        fecha: l.fecha || l.entry?.fecha,
         tipo: l.entry?.tipo,
         numero: l.entry?.numero,
         polizaConcepto: l.entry?.concepto,

@@ -299,7 +299,7 @@ function Dashboard() {
                     <tbody>
                       {movData.movements.map((m: any, i: number) => (
                         <tr key={i} className="border-b hover:bg-secondary/30">
-                          <td className="p-2 text-xs">{m.fechaReal ? new Date(m.fechaReal + "T12:00:00").toLocaleDateString("es-MX") : "—"}</td>
+                          <td className="p-2 text-xs">{m.fecha ? new Date(m.fecha + "T12:00:00").toLocaleDateString("es-MX") : "—"}</td>
                           <td className="p-2 font-mono text-xs">{[m.tipo, m.numero].filter(Boolean).join(" ")}</td>
                           <td className="p-2 text-xs">{m.lineaConcepto || m.polizaConcepto || "—"}</td>
                           <td className="p-2 text-right tabular-nums text-xs">{m.cargo > 0 ? fmtMoney(m.cargo) : ""}</td>
