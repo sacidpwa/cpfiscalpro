@@ -998,12 +998,23 @@ export const getBalanceGeneral = createServerFn({ method: "POST" })
     for (const s of saldos) {
       if (s.acumulativa) continue;
       const d = s.codigo.replace(/^0+/, "")[0];
-      // saldo_final viene firmado por naturaleza en account_balances:
-      //   deudora  -> cargo - abono (positivo cuando hay más cargo)
-      //   acreedora -> abono - cargo (positivo cuando hay más abono)
-      // El importador legacy de Aspel puede tener signos inconsistentes,
-      // pero nuestro recalcularSaldos los firma correctamente. Usamos el saldo tal cual.
-      const signedSaldo: number = s.saldo;
+      // saldo_final firmado por naturaleza en recalcularSaldos:
+      //   deudora  -> cargo - abono (positivo = más cargo)
+      //   acreedora -> abono - cargo (positivo = más abono)
+      //
+      // Convención contable para el balance general:
+      //   Activo (1xxx): deudora = +, acreedora = - (contra-cuenta: depreciaciones 136xxx)
+      //   Pasivo (2xxx): acreedora = + (saldo_final ya es positivo para pasivos normales)
+      //   Capital (3xxx): acreedora = + (saldo_final ya es positivo para capital normal)
+      let signedSaldo: number;
+      if (d === "1") {
+        // Activo: deudora suma, acreedora resta (contra-cuentas como depreciación)
+        const sign = s.naturaleza === "deudora" ? 1 : -1;
+        signedSaldo = s.saldo * sign;
+      } else {
+        // Pasivo y Capital: saldo_final de recalcularSaldos ya tiene el signo correcto
+        signedSaldo = s.saldo;
+      }
 
       if (Math.abs(signedSaldo) < 0.01) continue;
 
