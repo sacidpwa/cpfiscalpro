@@ -3,11 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { listEmployees, upsertEmployee, deleteEmployee } from "@/lib/payroll.functions";
+import { generateContratoTrabajo, generateRenuncia } from "@/lib/document-templates.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { calcSDI } from "@/lib/payroll.calc";
 import { fmtMoney, fmtDate } from "@/lib/format";
-import { Users, Plus, Pencil, Trash2, X, Upload, FileText, Check, Loader2, AlertCircle } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, X, Upload, FileText, Check, Loader2, AlertCircle, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/empleados")({
@@ -124,6 +125,42 @@ function Empleados() {
     if (!confirm("¿Eliminar empleado?")) return;
     await del({ data: { id } });
     qc.invalidateQueries({ queryKey: ["employees", org.id] });
+  }
+
+  const genContrato = useServerFn(generateContratoTrabajo);
+  const genRenuncia = useServerFn(generateRenuncia);
+
+  async function generarContrato(emp: any) {
+    try {
+      const r = await genContrato({ data: { organizationId: org.id, employeeId: emp.id } });
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(r.html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => win.print(), 400);
+      }
+      toast.success(`Contrato de ${r.nombreEmp} generado`);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
+  async function generarRenuncia(emp: any) {
+    const motivo = prompt("Motivo de la baja (opcional):");
+    try {
+      const r = await genRenuncia({ data: { organizationId: org.id, employeeId: emp.id, motivoBaja: motivo || undefined } });
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(r.html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => win.print(), 400);
+      }
+      toast.success(`Carta de renuncia de ${r.nombreEmp} generada`);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
   function descargarPlantillaAlta() {
     const html = `<!DOCTYPE html>
@@ -360,6 +397,7 @@ function Empleados() {
                         {e.puesto && <div className="mt-0.5 truncate text-xs text-muted-foreground">{e.puesto}{e.departamento ? ` · ${e.departamento}` : ""}</div>}
                       </div>
                       <div className="flex shrink-0 gap-1">
+                        <button onClick={() => generarContrato(e)} title="Generar contrato" className="rounded-md border bg-card p-1.5 hover:bg-secondary"><FileSignature className="h-3.5 w-3.5"/></button>
                         <button onClick={() => { setEditing(e); setOpen(true); }} className="rounded-md border bg-card p-1.5 hover:bg-secondary"><Pencil className="h-3.5 w-3.5"/></button>
                         <button onClick={() => remove(e.id)} className="rounded-md border bg-card p-1.5 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5"/></button>
                       </div>
@@ -410,6 +448,7 @@ function Empleados() {
                         <td className="px-3 py-2"><Badge status={e.estatus} /></td>
                         <td className="px-3 py-2 text-right">
                           <div className="flex justify-end gap-1">
+                            <button onClick={() => generarContrato(e)} title="Generar contrato" className="rounded p-1 hover:bg-secondary"><FileSignature className="h-3.5 w-3.5"/></button>
                             <button onClick={() => { setEditing(e); setOpen(true); }} className="rounded p-1 hover:bg-secondary"><Pencil className="h-3.5 w-3.5"/></button>
                             <button onClick={() => remove(e.id)} className="rounded p-1 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5"/></button>
                           </div>
@@ -432,6 +471,7 @@ function Badge({ status }: { status: string }) {
     activo: "bg-success/15 text-success",
     baja: "bg-destructive/15 text-destructive",
     suspendido: "bg-warning/15 text-warning",
+    renuncia: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
   };
   return <span className={`rounded px-1.5 py-0.5 text-xs font-medium capitalize ${map[status]}`}>{status}</span>;
 }
@@ -509,7 +549,7 @@ function EmpForm({ initial, onClose, onSave }: { initial: any; onClose: () => vo
           <Input label="CLABE" value={f.clabe} mono onChange={(v) => setF({ ...f, clabe: v })} />
           <Input label="Email" type="email" value={f.email} onChange={(v) => setF({ ...f, email: v })} />
           <Input label="Teléfono" value={f.telefono} onChange={(v) => setF({ ...f, telefono: v })} />
-          <Select label="Estatus" value={f.estatus} options={[["activo","Activo"],["baja","Baja"],["suspendido","Suspendido"]]} onChange={(v) => setF({ ...f, estatus: v })} />
+          <Select label="Estatus" value={f.estatus} options={[["activo","Activo"],["baja","Baja"],["suspendido","Suspendido"],["renuncia","Renuncia"]]} onChange={(v) => setF({ ...f, estatus: v })} />
           <Input label="CP Fiscal" value={f.cp_fiscal} mono onChange={(v) => setF({ ...f, cp_fiscal: v })} />
           <Input label="Régimen fiscal receptor" value={f.regimen_fiscal_receptor} mono onChange={(v) => setF({ ...f, regimen_fiscal_receptor: v })} />
           <Input label="Tipo régimen" value={f.tipo_regimen} onChange={(v) => setF({ ...f, tipo_regimen: v })} />

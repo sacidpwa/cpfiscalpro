@@ -105,6 +105,7 @@ function AdminShell() {
     { to: "/admin/solicitudes", label: "Solicitudes", icon: Inbox },
     { to: "/admin/cobranza", label: "Cobranza", icon: CreditCard },
     { to: "/admin/declaraciones", label: "Declaraciones", icon: FileText },
+    { to: "/admin/document-templates", label: "Plantillas", icon: FileText },
     { to: "/admin/consumo", label: "Consumo de timbres", icon: FileBarChart },
     { to: "/admin/facturapi", label: "FacturAPI", icon: Stamp },
   ];
