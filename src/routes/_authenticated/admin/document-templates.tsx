@@ -341,7 +341,7 @@ function TemplateDialog({
             <p className="mb-1 text-xs font-medium">
               Placeholders disponibles:
             </p>
-            <div className="grid grid-cols-3 gap-1 text-[10px] text-muted-foreground">
+            <div className="grid grid-cols-4 gap-1 text-[10px] text-muted-foreground">
               <span>{"{{RAZON_SOCIAL}}"}</span>
               <span>{"{{NOMBRE_COMERCIAL}}"}</span>
               <span>{"{{RFC}}"}</span>
@@ -355,11 +355,20 @@ function TemplateDialog({
               <span>{"{{PUESTO}}"}</span>
               <span>{"{{SALARIO_NUM}}"}</span>
               <span>{"{{SALARIO_LETRA}}"}</span>
+              <span>{"{{SALARIO_SEMANAL}}"}</span>
+              <span>{"{{SALARIO_SEMANAL_LETRA}}"}</span>
               <span>{"{{FECHA_ALTA}}"}</span>
               <span>{"{{FECHA_BAJA}}"}</span>
               <span>{"{{MOTIVO_BAJA}}"}</span>
               <span>{"{{CIUDAD_ORG}}"}</span>
               <span>{"{{FECHA_ACTUAL}}"}</span>
+              <span>{"{{PLAZO_CONTRATO}}"}</span>
+              <span>{"{{TIPO_PATRON}}"}</span>
+              <span>{"{{REPRESENTANTE_LEGAL}}"}</span>
+              <span>{"{{HORARIO}}"}</span>
+              <span>{"{{FECHA_INICIO_TEXTO}}"}</span>
+              <span>{"{{NOMBRE_TESTIGO_1}}"}</span>
+              <span>{"{{NOMBRE_TESTIGO_2}}"}</span>
             </div>
           </div>
         </div>

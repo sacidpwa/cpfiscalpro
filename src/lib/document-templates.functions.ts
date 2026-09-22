@@ -78,7 +78,7 @@ export const deleteDocTemplate = createServerFn({ method: "POST" })
   });
 
 // ─── Obtener datos de la org y empleado para rellenar placeholders ───
-async function getDocData(supabase: any, organizationId: string, employeeId: string) {
+async function getDocData(supabase: any, organizationId: string, employeeId: string): Promise<Record<string, any>> {
   const { data: org } = await supabase
     .from("organizations")
     .select("razon_social, nombre_comercial, rfc, direccion, codigo_postal")
@@ -142,6 +142,17 @@ async function getDocData(supabase: any, organizationId: string, employeeId: str
   };
 }
 
+// ─── Opciones del contrato de trabajo ───
+const contratoOptionsSchema = z.object({
+  plazoContrato: z.enum(["DETERMINADO", "INDETERMINADO"]).default("INDETERMINADO"),
+  fechaFinContrato: z.string().optional(),
+  tipoPatron: z.enum(["persona FÍSICA", "persona MORAL"]).default("persona FÍSICA"),
+  representanteLegal: z.string().default(""),
+  horario: z.string().default("de lunes a viernes en horario de 9:00 a 18:00 horas, con una hora de comida de 15:00 a 16:00 horas, y los sábados de 9:00 a 14:00 horas"),
+  nombreTestigo1: z.string().default(""),
+  nombreTestigo2: z.string().default(""),
+});
+
 // ─── Generar contrato de trabajo ───
 export const generateContratoTrabajo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -150,11 +161,21 @@ export const generateContratoTrabajo = createServerFn({ method: "POST" })
       organizationId: z.string().uuid(),
       employeeId: z.string().uuid(),
       templateId: z.string().uuid().optional(),
+      opciones: contratoOptionsSchema.optional(),
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const opts: {
+      plazoContrato?: string;
+      fechaFinContrato?: string;
+      tipoPatron?: string;
+      representanteLegal?: string;
+      horario?: string;
+      nombreTestigo1?: string;
+      nombreTestigo2?: string;
+    } = data.opciones ?? {};
 
     // Buscar plantilla activa de contrato
     let template: any = null;
@@ -169,11 +190,56 @@ export const generateContratoTrabajo = createServerFn({ method: "POST" })
     }
 
     if (!template) {
-      // Usar plantilla estándar como fallback
       template = { contenido_html: DEFAULT_CONTRATO_TRABAJO, nombre: "Contrato de Trabajo (estándar)" };
     }
 
     const placeholders = await getDocData(supabaseAdmin, data.organizationId, data.employeeId);
+
+    // Agregar placeholders de opciones del contrato
+    const plazo = opts.plazoContrato ?? "INDETERMINADO";
+    placeholders["{{PLAZO_CONTRATO}}"] = plazo;
+
+    // Tipo de patrón
+    const tipoPatron = opts.tipoPatron ?? "persona FÍSICA";
+    placeholders["{{TIPO_PATRON}}"] = tipoPatron;
+    placeholders["{{TIPO_PATRON_LEGAL}}"] = tipoPatron === "persona MORAL"
+      ? "Representante Legal"
+      : "Patrón";
+
+    // Representante legal (solo para persona moral)
+    const repLegal = opts.representanteLegal || "";
+    placeholders["{{REPRESENTANTE_LEGAL}}"] = repLegal;
+    placeholders["{{DECLARACION_REP_LEGAL}}"] = tipoPatron === "persona MORAL" && repLegal
+      ? `<p>6. Que el/la representante legal es: <strong>${repLegal}</strong>, con facultades suficientes para la celebración del presente contrato.</p>`
+      : "";
+
+    // Horario personalizado
+    placeholders["{{HORARIO}}"] = opts.horario
+      || "de lunes a viernes en horario de 9:00 a 18:00 horas, con una hora de comida de 15:00 a 16:00 horas, y los sábados de 9:00 a 14:00 horas";
+
+    // Salario semanal
+    const salarioDiario = Number(placeholders["{{SALARIO_NUM}}"]?.replace(/[$,]/g, "") || 0);
+    const salarioSemanal = salarioDiario * 7;
+    const salarioSemanalNum = `$${salarioSemanal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
+    const salarioSemanalLetra = numberToMoney(salarioSemanal);
+    placeholders["{{SALARIO_SEMANAL}}"] = salarioSemanalNum;
+    placeholders["{{SALARIO_SEMANAL_LETRA}}"] = salarioSemanalLetra;
+
+    // Fecha de inicio en texto
+    const fechaAlta = placeholders["{{FECHA_ALTA}}"] || "";
+    placeholders["{{FECHA_INICIO_TEXTO}}"] = fechaToTexto(fechaAlta);
+
+    // Texto fin de plazo
+    if (plazo === "DETERMINADO" && opts.fechaFinContrato) {
+      placeholders["{{TEXTO_FIN_PLAZO}}"] = `hasta el día <strong>${fechaToTexto(opts.fechaFinContrato)}</strong>`;
+    } else {
+      placeholders["{{TEXTO_FIN_PLAZO}}"] = "y permanecerá vigente mientras subsista la relación de trabajo";
+    }
+
+    // Testigos
+    placeholders["{{NOMBRE_TESTIGO_1}}"] = opts.nombreTestigo1 || "___________________________";
+    placeholders["{{NOMBRE_TESTIGO_2}}"] = opts.nombreTestigo2 || "___________________________";
+
     let html = template.contenido_html;
     for (const [key, value] of Object.entries(placeholders)) {
       html = html.replaceAll(key, String(value));
@@ -343,6 +409,48 @@ export const listEmployeeDocuments = createServerFn({ method: "POST" })
   });
 
 import { DEFAULT_CONTRATO_TRABAJO, DEFAULT_RENUNCIA, RIT_DEFAULTS } from "./document-templates.defaults";
+
+function fechaToTexto(fecha: string): string {
+  if (!fecha) return "________";
+  // Support YYYY-MM-DD or DD/MM/YYYY
+  let d: Date;
+  if (fecha.includes("-")) {
+    d = new Date(fecha + "T00:00:00");
+  } else if (fecha.includes("/")) {
+    const [dd, mm, yyyy] = fecha.split("/");
+    d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  } else {
+    return fecha;
+  }
+  if (isNaN(d.getTime())) return fecha;
+
+  const dias = ["", "primero", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+    "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve",
+    "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro", "veinticinco", "veintiséis",
+    "veintisiete", "veintiocho", "veintinueve", "treinta", "treinta y uno"];
+  const meses = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+  const año = d.getFullYear();
+  const mes = meses[d.getMonth() + 1];
+  const dia = dias[d.getDate()];
+
+  // Convert year to text
+  const unidades = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
+  const especiales = ["", "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"];
+  const decenas = ["", "", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+  let añoTexto = "";
+  const s = String(año);
+  if (año >= 2000 && año < 2100) {
+    const u = Number(s[3]);
+    añoTexto = `dos mil ${u === 0 ? "" : unidades[u]}`.trim();
+  } else {
+    añoTexto = String(año);
+  }
+
+  return `el día ${dia} de ${mes} del año ${añoTexto}`;
+}
+
 function numberToMoney(n: number): string {
   if (n <= 0) return "CERO PESOS 00/100 M.N.";
   const unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];

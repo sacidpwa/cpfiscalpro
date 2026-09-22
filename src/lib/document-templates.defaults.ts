@@ -19,21 +19,21 @@ export const DEFAULT_CONTRATO_TRABAJO = `
 </head>
 <body>
 
-<h1>CONTRATO INDIVIDUAL DE TRABAJO POR TIEMPO INDETERMINADO</h1>
+<h1>CONTRATO INDIVIDUAL DE TRABAJO POR TIEMPO {{PLAZO_CONTRATO}}</h1>
 <h2>PERSONAL ADMINISTRATIVO Y DE CONFIANZA</h2>
 
-<p style="text-align:justify">CONTRATO INDIVIDUAL DE TRABAJO POR TIEMPO INDETERMINADO que celebran por una parte <strong>{{RAZON_SOCIAL}}</strong>, a quien en lo sucesivo se le denominará "EL PATRÓN", y por la otra <strong>{{NOMBRE_COMPLETO}}</strong>, a quien en lo sucesivo se le denominará "EL TRABAJADOR", al tenor de las siguientes:</p>
+<p style="text-align:justify">CONTRATO INDIVIDUAL DE TRABAJO POR TIEMPO {{PLAZO_CONTRATO}} que celebran por una parte <strong>{{RAZON_SOCIAL}}</strong>, por conducto de su {{TIPO_PATRON}} {{REPRESENTANTE_LEGAL}}, a quien en lo sucesivo se le denominará "EL PATRÓN", y por la otra <strong>{{NOMBRE_COMPLETO}}</strong>, a quien en lo sucesivo se le denominará "EL TRABAJADOR", al tenor de las siguientes:</p>
 
 <h3 style="margin-top:16px">DECLARACIONES</h3>
 
 <div class="clause">
 <p><strong>Declara "EL PATRÓN":</strong></p>
-<p>1. Que es una persona FÍSICA/MORAL, con capacidad legal para celebrar el presente contrato.</p>
+<p>1. Que es una persona <strong>{{TIPO_PATRON}}</strong>, con capacidad legal para celebrar el presente contrato.</p>
 <p>2. Que su nombre es: <strong>{{RAZON_SOCIAL}}</strong>.</p>
 <p>3. Que su RFC es: <strong>{{RFC}}</strong>.</p>
 <p>4. Que su domicilio se encuentra ubicado en: <strong>{{DOMICILIO}}</strong>.</p>
-<p>5. Que es su voluntad celebrar el presente Contrato Individual de Trabajo por TIEMPO INDETERMINADO.</p>
-</div>
+<p>5. Que es su voluntad celebrar el presente Contrato Individual de Trabajo por TIEMPO {{PLAZO_CONTRATO}}.</p>
+{{DECLARACION_REP_LEGAL}}</div>
 
 <div class="clause">
 <p><strong>Declara "EL TRABAJADOR":</strong></p>
@@ -41,9 +41,8 @@ export const DEFAULT_CONTRATO_TRABAJO = `
 <p>2. Que su nombre completo es: <strong>{{NOMBRE_COMPLETO}}</strong>.</p>
 <p>3. Que su CURP es: <strong>{{CURP_EMP}}</strong>.</p>
 <p>4. Que su RFC es: <strong>{{RFC_EMP}}</strong>.</p>
-<p>5. Que su domicilio se encuentra ubicado en el lugar que ostenta como domicilio fiscal.</p>
-<p>6. Que cuenta con los conocimientos, experiencia, aptitudes y habilidades necesarias para desempeñar las funciones correspondientes al puesto para el cual es contratado.</p>
-<p>7. Que es su voluntad prestar sus servicios personales y subordinados a "EL PATRÓN".</p>
+<p>5. Que cuenta con los conocimientos, experiencia, aptitudes y habilidades necesarias para desempeñar las funciones correspondientes al puesto para el cual es contratado.</p>
+<p>6. Que es su voluntad prestar sus servicios personales y subordinados a "EL PATRÓN".</p>
 </div>
 
 <p style="text-align:justify;margin-top:12px">Ambas partes manifiestan que su consentimiento no se encuentra viciado por error, dolo, violencia o mala fe, por lo que están de acuerdo en sujetarse a las siguientes:</p>
@@ -56,13 +55,13 @@ export const DEFAULT_CONTRATO_TRABAJO = `
 
 <div class="clause"><span class="clause-title">TERCERA. SUBORDINACIÓN.</span> "EL TRABAJADOR" estará subordinado a "EL PATRÓN" y a los superiores jerárquicos que correspondan conforme al organigrama de la institución, obligándose a desempeñar sus funciones con eficiencia, responsabilidad, calidad y respeto.</div>
 
-<div class="clause"><span class="clause-title">CUARTA. SALARIO.</span> "EL PATRÓN" pagará a "EL TRABAJADOR" un salario de <strong>{{SALARIO_NUM}}</strong> ({{SALARIO_LETRA}}) DIARIO, sujeto a las retenciones, impuestos y descuentos legalmente procedentes.</div>
+<div class="clause"><span class="clause-title">CUARTA. SALARIO.</span> "EL PATRÓN" pagará a "EL TRABAJADOR" un salario de <strong>{{SALARIO_SEMANAL}}</strong> ({{SALARIO_SEMANAL_LETRA}}) SEMANAL, sujeto a las retenciones, impuestos y descuentos legalmente procedentes. El salario diario integra es de <strong>{{SALARIO_NUM}}</strong> ({{SALARIO_LETRA}}).</div>
 
-<div class="clause"><span class="clause-title">QUINTA. DURACIÓN DE LA RELACIÓN LABORAL.</span> La relación laboral objeto del presente contrato es por TIEMPO INDETERMINADO, iniciando el día <strong>{{FECHA_ALTA}}</strong>, y permanecerá vigente mientras subsista la relación de trabajo, sin perjuicio de las causas de terminación o rescisión previstas por la legislación aplicable.</div>
+<div class="clause"><span class="clause-title">QUINTA. DURACIÓN DE LA RELACIÓN LABORAL.</span> La relación laboral objeto del presente contrato es por TIEMPO {{PLAZO_CONTRATO}}, iniciando el día <strong>{{FECHA_INICIO_TEXTO}}</strong>, y permanecerá vigente mientras subsista la relación de trabajo {{TEXTO_FIN_PLAZO}}, sin perjuicio de las causas de terminación o rescisión previstas por la legislación aplicable.</div>
 
 <div class="clause"><span class="clause-title">SEXTA. PERÍODO DE CAPACITACIÓN INICIAL.</span> "EL TRABAJADOR" estará sujeto a un período de capacitación inicial de tres meses, durante el cual será evaluado respecto de la suficiencia, conocimientos, habilidades, aptitudes y competencia necesarios para desempeñar adecuadamente las funciones correspondientes al puesto para el cual ha sido contratado. El período de capacitación inicial será improrrogable y el tiempo transcurrido durante el mismo será considerado para efectos de antigüedad.</div>
 
-<div class="clause"><span class="clause-title">SÉPTIMA. JORNADA Y HORARIO.</span> "EL TRABAJADOR" prestará sus servicios de lunes a viernes en horario de 9:00 a 18:00 horas, con una hora de comida de 15:00 a 16:00 horas, y los sábados de 9:00 a 14:00 horas. El horario podrá modificarse por necesidades de la institución, de acuerdo con las disposiciones aplicables y el Reglamento Interior de Trabajo.</div>
+<div class="clause"><span class="clause-title">SÉPTIMA. JORNADA Y HORARIO.</span> "EL TRABAJADOR" prestará sus servicios conforme al siguiente horario: <strong>{{HORARIO}}</strong>. El horario podrá modificarse por necesidades de la institución, de acuerdo con las disposiciones aplicables y el Reglamento Interior de Trabajo.</div>
 
 <div class="clause"><span class="clause-title">OCTAVA. REGISTRO DE ASISTENCIA.</span> "EL TRABAJADOR" deberá registrar su entrada y salida mediante el sistema que determine "EL PATRÓN". Se observarán las disposiciones del Reglamento Interior de Trabajo respecto de tolerancias, retardos, faltas y justificantes.</div>
 
@@ -74,7 +73,7 @@ export const DEFAULT_CONTRATO_TRABAJO = `
 
 <div class="clause"><span class="clause-title">DÉCIMA SEGUNDA. AGUINALDO.</span> "EL PATRÓN" cubrirá a "EL TRABAJADOR" el aguinaldo que corresponda conforme a la legislación laboral aplicable.</div>
 
-<div class="clause"><span class="clause-title">DÉCIMA TERCERA. OBLIGACIONES DEL TRABAJADOR.</span> "EL TRABAJADOR" se obliga a: 1) Cumplir las funciones de su puesto; 2) Observar el Reglamento Interior de Trabajo; 3) Registrar correctamente sus entradas y salidas; 4) Mantener una conducta respetuosa; 5) Utilizar adecuadamente los equipos y materiales; 6) Mantener la confidencialidad de la información; 7) Asistir a las capacitaciones obligatorias; 8) Cumplir las medidas de seguridad e higiene.</div>
+<div class="clause"><span class="clause-title">DÉCIMA TERCERA. OBLIGACIONES DEL TRABAJADOR.</span> "EL TRABAJADOR" se obliga a: 1) Cumplir las funciones de su puesto; 2) Cumplir con el Reglamento Interior de Trabajo; 3) Registrar correctamente sus entradas y salidas; 4) Mantener una conducta respetuosa; 5) Utilizar adecuadamente los equipos y materiales; 6) Mantener la confidencialidad de la información; 7) Asistir a las capacitaciones obligatorias; 8) Cumplir las medidas de seguridad e higiene.</div>
 
 <div class="clause"><span class="clause-title">DÉCIMA CUARTA. CONFIDENCIALIDAD.</span> "EL TRABAJADOR" se obliga a guardar absoluta confidencialidad respecto de la información administrativa, financiera, laboral y cualquier otra información a la que tenga acceso con motivo de sus funciones. Queda prohibido revelar, copiar, divulgar o utilizar dicha información para beneficio propio o de terceros sin autorización.</div>
 
@@ -92,16 +91,28 @@ export const DEFAULT_CONTRATO_TRABAJO = `
 
 <div class="clause"><span class="clause-title">VIGÉSIMA PRIMERA. LEGISLACIÓN APLICABLE.</span> Para todo lo no previsto en el presente contrato serán aplicables las disposiciones de la Ley Federal del Trabajo, la Ley del Seguro Social, el Reglamento Interior de Trabajo y demás disposiciones aplicables.</div>
 
-<p style="text-align:justify;margin-top:20px">Leído que fue el presente contrato y enteradas ambas partes de su contenido y alcance, lo firman por duplicado en <strong>{{CIUDAD_ORG}}</strong>, a los <strong>{{FECHA_ACTUAL}}</strong>.</p>
+<p style="text-align:justify;margin-top:20px">Leído que fue el presente contrato y enteradas ambas partes de su contenido y alcance, lo firman por duplicado en <strong>{{CIUDAD_ORG}}</strong>, el día <strong>{{FECHA_INICIO_TEXTO}}</strong>, fecha de inicio de la relación laboral.</p>
 
 <div class="signature-section">
   <div>
     <div class="sig-line">"EL PATRÓN"</div>
-    <div style="margin-top:4px;font-size:11px">Nombre: {{RAZON_SOCIAL}}</div>
+    <div style="margin-top:4px;font-size:11px">{{TIPO_PATRON_LEGAL}}</div>
+    <div style="font-size:10px;color:#666">{{REPRESENTANTE_LEGAL}}</div>
   </div>
   <div>
     <div class="sig-line">"EL TRABAJADOR"</div>
     <div style="margin-top:4px;font-size:11px">Nombre: {{NOMBRE_COMPLETO}}</div>
+  </div>
+</div>
+
+<div class="signature-section" style="margin-top:20px">
+  <div>
+    <div class="sig-line">TESTIGO 1</div>
+    <div style="margin-top:4px;font-size:11px">{{NOMBRE_TESTIGO_1}}</div>
+  </div>
+  <div>
+    <div class="sig-line">TESTIGO 2</div>
+    <div style="margin-top:4px;font-size:11px">{{NOMBRE_TESTIGO_2}}</div>
   </div>
 </div>
 

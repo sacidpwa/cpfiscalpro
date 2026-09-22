@@ -129,10 +129,15 @@ function Empleados() {
 
   const genContrato = useServerFn(generateContratoTrabajo);
   const genRenuncia = useServerFn(generateRenuncia);
+  const [contratoDialog, setContratoDialog] = useState<{ emp: any } | null>(null);
 
   async function generarContrato(emp: any) {
+    setContratoDialog({ emp });
+  }
+
+  async function confirmarGenerarContrato(emp: any, opciones: any) {
     try {
-      const r = await genContrato({ data: { organizationId: org.id, employeeId: emp.id } });
+      const r = await genContrato({ data: { organizationId: org.id, employeeId: emp.id, opciones } });
       const win = window.open("", "_blank");
       if (win) {
         win.document.write(r.html);
@@ -141,6 +146,7 @@ function Empleados() {
         setTimeout(() => win.print(), 400);
       }
       toast.success(`Contrato de ${r.nombreEmp} generado`);
+      setContratoDialog(null);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -462,6 +468,13 @@ function Empleados() {
           )}
       </div>
       {open && <EmpForm initial={editing} onClose={() => { setOpen(false); setEditing(null); }} onSave={save} />}
+      {contratoDialog && (
+        <ContratoDialog
+          emp={contratoDialog.emp}
+          onClose={() => setContratoDialog(null)}
+          onConfirm={(opciones) => confirmarGenerarContrato(contratoDialog.emp, opciones)}
+        />
+      )}
     </div>
   );
 }
@@ -589,5 +602,92 @@ function Select({ label, value, options, onChange, required }: { label: string; 
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
     </Field>
+  );
+}
+
+function ContratoDialog({
+  emp,
+  onClose,
+  onConfirm,
+}: {
+  emp: any;
+  onClose: () => void;
+  onConfirm: (opciones: any) => void;
+}) {
+  const [f, setF] = useState({
+    plazoContrato: "INDETERMINADO",
+    fechaFinContrato: "",
+    tipoPatron: "persona FÍSICA",
+    representanteLegal: "",
+    horario: "de lunes a viernes en horario de 9:00 a 18:00 horas, con una hora de comida de 15:00 a 16:00 horas, y los sábados de 9:00 a 14:00 horas",
+    nombreTestigo1: "",
+    nombreTestigo2: "",
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl space-y-4 rounded-xl border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Opciones del Contrato de Trabajo</h3>
+          <button onClick={onClose} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
+        </div>
+
+        <p className="text-sm text-muted-foreground">
+          Generando contrato para: <strong>{[emp.nombre, emp.apellido_paterno, emp.apellido_materno].filter(Boolean).join(" ")}</strong>
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-xs">
+            Plazo del contrato
+            <select value={f.plazoContrato} onChange={(e) => setF({ ...f, plazoContrato: e.target.value })} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm">
+              <option value="INDETERMINADO">Tiempo indeterminado</option>
+              <option value="DETERMINADO">Tiempo determinado</option>
+            </select>
+          </label>
+
+          {f.plazoContrato === "DETERMINADO" && (
+            <label className="text-xs">
+              Fecha de fin
+              <input type="date" value={f.fechaFinContrato} onChange={(e) => setF({ ...f, fechaFinContrato: e.target.value })} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm" />
+            </label>
+          )}
+
+          <label className="text-xs">
+            Tipo de patrón
+            <select value={f.tipoPatron} onChange={(e) => setF({ ...f, tipoPatron: e.target.value })} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm">
+              <option value="persona FÍSICA">Persona Física</option>
+              <option value="persona MORAL">Persona Moral</option>
+            </select>
+          </label>
+
+          {f.tipoPatron === "persona MORAL" && (
+            <label className="text-xs">
+              Representante Legal
+              <input value={f.representanteLegal} onChange={(e) => setF({ ...f, representanteLegal: e.target.value })} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm" placeholder="Nombre del representante legal" />
+            </label>
+          )}
+
+          <label className="col-span-2 text-xs">
+            Horario de trabajo
+            <textarea value={f.horario} onChange={(e) => setF({ ...f, horario: e.target.value })} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm" rows={2} />
+          </label>
+
+          <label className="text-xs">
+            Testigo 1
+            <input value={f.nombreTestigo1} onChange={(e) => setF({ ...f, nombreTestigo1: e.target.value })} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm" placeholder="Nombre completo" />
+          </label>
+
+          <label className="text-xs">
+            Testigo 2
+            <input value={f.nombreTestigo2} onChange={(e) => setF({ ...f, nombreTestigo2: e.target.value })} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm" placeholder="Nombre completo" />
+          </label>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={onClose} className="rounded px-3 py-1.5 text-sm">Cancelar</button>
+          <button onClick={() => onConfirm(f)} className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90">Generar Contrato</button>
+        </div>
+      </div>
+    </div>
   );
 }
