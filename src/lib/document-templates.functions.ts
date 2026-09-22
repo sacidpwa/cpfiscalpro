@@ -240,10 +240,12 @@ export const generateContratoTrabajo = createServerFn({ method: "POST" })
     placeholders["{{NOMBRE_TESTIGO_1}}"] = opts.nombreTestigo1 || "___________________________";
     placeholders["{{NOMBRE_TESTIGO_2}}"] = opts.nombreTestigo2 || "___________________________";
 
-    let html = template.contenido_html;
+    let html = template.contenido_html ?? "";
     for (const [key, value] of Object.entries(placeholders)) {
-      html = html.replaceAll(key, String(value));
+      html = html.replaceAll(key, String(value ?? ""));
     }
+    // Strip any remaining unreplaced {{...}} placeholders
+    html = html.replace(/\{\{[A-Z_0-9]+\}\}/g, "");
 
     // Guardar documento generado
     const { data: emp } = await supabaseAdmin.from("employees")
@@ -299,10 +301,11 @@ export const generateRenuncia = createServerFn({ method: "POST" })
     if (data.motivoBaja) {
       placeholders["{{MOTIVO_BAJA}}"] = data.motivoBaja;
     }
-    let html = template.contenido_html;
+    let html = template.contenido_html ?? "";
     for (const [key, value] of Object.entries(placeholders)) {
-      html = html.replaceAll(key, String(value));
+      html = html.replaceAll(key, String(value ?? ""));
     }
+    html = html.replace(/\{\{[A-Z_0-9]+\}\}/g, "");
 
     const { data: emp } = await supabaseAdmin.from("employees")
       .select("nombre, apellido_paterno, apellido_materno")
@@ -365,7 +368,7 @@ export const generateRIT = createServerFn({ method: "POST" })
     const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
     const fechaActual = `${now.getDate()} de ${meses[now.getMonth()]} del año ${now.getFullYear()}`;
 
-    let html = template.contenido_html;
+    let html = template.contenido_html ?? "";
     const replacements: Record<string, string> = {
       "{{RAZON_SOCIAL}}": razonSocial,
       "{{NOMBRE_COMERCIAL}}": nombreComercial,
@@ -374,8 +377,10 @@ export const generateRIT = createServerFn({ method: "POST" })
       "{{FECHA_ACTUAL}}": fechaActual,
     };
     for (const [key, value] of Object.entries(replacements)) {
-      html = html.replaceAll(key, value);
+      html = html.replaceAll(key, value ?? "");
     }
+    // Strip any remaining unreplaced {{...}} placeholders
+    html = html.replace(/\{\{[A-Z_0-9]+\}\}/g, "");
 
     const { error } = await supabaseAdmin.from("employee_documents" as any).insert({
       organization_id: data.organizationId,

@@ -237,6 +237,7 @@ export const DEFAULT_RIT_GENERICO = `
   h2 { font-size: 13px; margin-top: 16px; margin-bottom: 8px; }
   .clause { margin-bottom: 10px; text-align: justify; }
   .clause-num { font-weight: bold; }
+  .art-ref { font-style: italic; color: #555; font-size: 10px; }
   .prohibited { background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 8px 12px; margin: 8px 0; }
   .signature-grid { margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
   .sig-line { border-top: 1px solid #333; margin-top: 40px; padding-top: 4px; text-align: center; font-size: 10px; }
@@ -250,7 +251,7 @@ export const DEFAULT_RIT_GENERICO = `
   Todos los empleados que laboren en <strong>{{RAZON_SOCIAL}}</strong> están obligados a cumplir cabalmente con el siguiente reglamento.
 </p>
 <p style="text-align:justify;margin-bottom:12px">
-  El presente Reglamento Interior de Trabajo ha sido formulado de común acuerdo por una Comisión Mixta integrada por representantes de los trabajadores y del patrón, de conformidad con el artículo 424, fracción I, de la Ley Federal del Trabajo.
+  El presente Reglamento Interior de Trabajo ha sido formulado de común acuerdo por una Comisión Mixta integrada por representantes de los trabajadores y del patrón, de conformidad con el artículo 424, fracción I, de la Ley Federal del Trabajo. <span class="art-ref">(Art. 424 LFT — obligatoriedad para centros de trabajo con más de 20 trabajadores)</span>
 </p>
 <p style="text-align:justify;margin-bottom:16px;font-size:10px;color:#555">
   Fecha de entrada en vigor: {{FECHA_ACTUAL}}
@@ -258,62 +259,141 @@ export const DEFAULT_RIT_GENERICO = `
 
 <div class="clause">
   <span class="clause-num">PRIMERA. Lugar de trabajo.</span>
-  El trabajador iniciará y terminará las labores designadas en el domicilio del centro de trabajo ubicado en <strong>{{DOMICILIO}}</strong>, o en aquellos lugares a los que sea comisionado por necesidades de la institución.
+  El trabajador iniciará y terminará las labores designadas en el domicilio del centro de trabajo ubicado en <strong>{{DOMICILIO}}</strong>, o en aquellos lugares a los que sea comisionado por necesidades de la institución. El patrón estará obligado a prestar los medicamentos, reinstalar los equipos y adoptar las medidas que las autoridades sanitarias determinen. <span class="art-ref">(Art. 82 LFT — lugar convenido para la prestación de servicios; Art. 52 LFT — obligación del patrón de prestar atención médica)</span>
 </div>
 
 <div class="clause">
-  <span class="clause-num">SEGUNDA. Horario de trabajo.</span>
+  <span class="clause-num">SEGUNDA. Jornada de trabajo.</span>
+  La jornada máxima de trabajo será la que acuerden las partes. En caso de que no hubiere acuerdo, la jornada máxima será: diurna de ocho horas; nocturna de siete horas; mixta de siete horas y media. Se considerará jornada diurna la que se celebre entre las seis y las veinte horas; nocturna la que se celebre entre las veinte y las seis horas; mixta la que comprenda période tanto diurnas como nocturnas. <span class="art-ref">(Arts. 58 a 65 LFT — jornadas máximas: 8 hrs diurna, 7 hrs nocturna, 7.5 hrs mixta)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">TERCERA. Horario de trabajo.</span>
   De acuerdo con el puesto que desempeña:<br/>
   • <strong>Personal Administrativo:</strong> Lunes a viernes de 9:00 a 18:00 hrs, con hora de comida de 15:00 a 16:00 hrs; sábados de 9:00 a 14:00 hrs.<br/>
   • <strong>Personal Operativo:</strong> De acuerdo a las necesidades de la empresa y bajo autorización de la dirección.<br/>
-  La jornada laboral deberá ser prestada de forma eficiente, evitando cualquier pérdida de tiempo o distracción personal.
+  La jornada laboral deberá ser prestada de forma eficiente, evitando cualquier pérdida de tiempo o distracción personal. <span class="art-ref">(Art. 60 LFT — obligación del patrón de informar al trabajador sobre jornada, descansos y salario; Art. 82 LFT — lugar y horario convenidos)</span>
 </div>
 
 <div class="clause">
-  <span class="clause-num">TERCERA. Asistencia y puntualidad.</span>
+  <span class="clause-num">CUARTA. Tiempo extraordinario.</span>
+  El trabajo extraordinario no podrá exceder de nueve horas diarias ni de tres veces por semana, y deberá pagarse con un ciento por ciento más del salario fijado para la jornada ordinaria. Las primeras nueve horas extraordinarias que se laboren en la semana deberán pagarse con un ciento por ciento más del salario normal; por las horas excedentes se pagará un ciento por ciento más del salario de las horas dobles. <span class="art-ref">(Arts. 66 a 68 LFT — horas extra: máx. 9 hrs/día, 3 veces/semana; primeras 9 hrs/semana al 100%, excedente al 200%)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">QUINTA. Días de descanso.</span>
+  Los trabajadores que laboren en forma ininterrumpida tendrán derecho a un día de descanso por cada seis días de trabajo, con goce de salario integro. Los días de descanso obligatorio serán los que establezca la legislación vigente. <span class="art-ref">(Arts. 69 a 74 LFT — descanso semanal obligatorio; días festivos: 1 de enero, primer lunes de febrero, tercer lunes de marzo, 1 de mayo, 16 de septiembre, tercer lunes de noviembre, 25 de diciembre)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">SEXTA. Asistencia y puntualidad.</span>
   Los trabajadores deberán presentarse puntualmente a sus labores. Se darán 10 minutos de tolerancia a todos los empleados en la hora de entrada. Después del minuto 11 se considerará como un RETARDO MENOR; después del minuto 16 se considera un RETARDO MAYOR; después del minuto 21 solo podrá ingresar previa autorización por escrito de su jefe inmediato.<br/><br/>
   Acumulando 3 retardos menores en la quincena se hará acreedor a un llamado de atención por escrito. Acumulando 2 retardos mayores en la quincena se hará acreedor a un llamado de atención por escrito.<br/><br/>
-  Contar con 3 faltas injustificadas en un periodo de 30 días será motivo de rescisión de contrato.
+  Contar con 3 faltas injustificadas en un periodo de 30 días será motivo de rescisión de contrato. <span class="art-ref">(Art. 47, fracción II, LFT — causales de rescisión: inasistencias injustificadas 3 veces en 30 días; Art. 60 LFT — obligación de llevar registro de asistencia)</span>
 </div>
 
 <div class="clause">
-  <span class="clause-num">CUARTA. Vacaciones.</span>
-  Los trabajadores que tengan más de un año de servicios disfrutarán de un periodo anual de vacaciones pagadas no inferior a doce días laborables. Dicho periodo aumentará en dos días laborables por cada año subsecuente hasta llegar a veinte días y, a partir del sexto año, aumentará en dos días por cada cinco años de servicios, en términos del artículo 76 de la Ley Federal del Trabajo.
+  <span class="clause-num">SÉPTIMA. Vacaciones.</span>
+  Los trabajadores que tengan más de un año de servicios disfrutarán de un periodo anual de vacaciones pagadas no inferior a doce días laborables. Dicho periodo aumentará en dos días laborables por cada año subsecuente hasta llegar a veinte días y, a partir del sexto año, aumentará en dos días por cada cinco años de servicios. <span class="art-ref">(Art. 76 LFT — vacaciones progresivas: 12 días primer año + 2 días por año hasta llegar a 20; a partir del 6° año, 2 días por cada 5 años)</span>
 </div>
 
 <div class="clause">
-  <span class="clause-num">QUINTA. Definición de labores.</span>
-  Cada uno de los colaboradores deberá cumplir con su definición de labores y se hará acreedor a las sanciones reglamentarias en caso de no cumplir con las actividades encomendadas por su jefe inmediato.
+  <span class="clause-num">OCTAVA. Prima vacacional.</span>
+  El trabajador que disfrute de vacaciones tendrá derecho a una prima no menor del veinticinco por ciento sobre los salarios que le correspondan durante el periodo de vacaciones. <span class="art-ref">(Art. 80 LFT — prima vacacional mínima del 25%)</span>
 </div>
 
 <div class="clause">
-  <span class="clause-num">SEXTA. Sanciones administrativas.</span>
+  <span class="clause-num">NOVENA. Aguinaldo.</span>
+  Los trabajadores tendrán derecho a un aguinaldo anual que será no menor de quince días de salario, el cual deberá pagarse antes del día veinte de diciembre. Cuando el trabajador no haya laborado todo el año, el aguinaldo se pagará de manera proporcional. <span class="art-ref">(Art. 87 LFT — aguinaldo mínimo de 15 días de salario)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">DÉCIMA. Prima dominical.</span>
+  Los trabajadores que presten servicios los domingos tendrán derecho a una prima adicional del veinticinco por ciento sobre el salario de los días ordinarios de trabajo. <span class="art-ref">(Art. 71 LFT — prima dominical mínima del 25%)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">DÉCIMA PRIMERA. Salario.</span>
+  El salario se pagará en moneda de curso legal y en el lugar convenido. El patrón deberá entregar al trabajador un recibo de pago especificando el salario, percepciones y deducciones. <span class="art-ref">(Arts. 82 a 89 LFT — pago del salario en moneda de curso legal; Art. 83 — prohibición de pagar en mercancías, vales o tokens)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">DÉCIMA SEGUNDA. Definición de labores.</span>
+  Cada uno de los colaboradores deberá cumplir con su definición de labores y se hará acreedor a las sanciones reglamentarias en caso de no cumplir con las actividades encomendadas por su jefe inmediato. <span class="art-ref">(Art. 5, fracción III, LFT — obligación de cumplir con las condiciones de trabajo)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">DÉCIMA TERCERA. Actividades del puesto — Auxiliar de Almacén.</span>
+  El Auxiliar de Almacén deberá desempeñar las siguientes actividades principales:<br/><br/>
+  <strong>a) Organización de almacén:</strong> Asegurar que los productos estén almacenados de forma lógica y accesible, optimizando el uso del espacio.<br/>
+  <strong>b) Preparación de pedidos:</strong> Seleccionar los productos correctos antes de su entrega al vendedor.<br/>
+  <strong>c) Control de inventarios:</strong> Participar en la toma de inventarios para asegurar que las existencias físicas coincidan con los registros en el sistema.<br/>
+  <strong>d) Carga y descarga de mercancías:</strong> Realizar la carga y descarga de productos con la debida manipulación para evitar daños.<br/>
+  <strong>e) Optimización del espacio de almacén:</strong> Reorganizar productos y ajustar posiciones según las necesidades de la empresa.<br/>
+  <strong>f) Mantenimiento del orden y limpieza:</strong> Mantener el almacén limpio y ordenado para garantizar la seguridad y facilitar la localización de productos.<br/>
+  <strong>g) Atención al cliente:</strong> Apoyar en mostrar las piezas al cliente para verificar su estado.<br/>
+  <strong>h) Recepción de material:</strong> Apoyar en la revisión y recepción de material.<br/>
+  <strong>i) Demás actividades:</strong> Aquellas que le sean asignadas por su jefe inmediato, las cuales deberán ser dentro de su horario de trabajo. <span class="art-ref">(Art. 5, fracción I, LFT — obligación de cumplir con las condiciones de trabajo; Art. 60 LFT — obligación del patrón de informar sobre funciones)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">DÉCIMA CUARTA. Obligaciones de los trabajadores.</span>
+  El personal deberá: cumplir con las condiciones de trabajo; dirigirse con sus jefes inmediatos para aclaración de dudas; portar vestimenta adecuada al puesto; evitar distracciones dentro del horario laboral; utilizar lenguaje formal, respetuoso y no discriminatorio; asistir a cursos obligatorios; utilizar adecuadamente los equipos proporcionados; mantener la confidencialidad de la información. <span class="art-ref">(Art. 5, fracciones I a VIII, LFT — obligaciones generales de los trabajadores)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">DÉCIMA QUINTA. Prohibiciones.</span>
+  Está prohibido al personal: ejecutar actos que pongan en peligro su seguridad o la de terceros; faltar al trabajo sin causa justificada; substraer materiales o útiles de la empresa; presentarse en estado de embriaguez o bajo influencia de sustancias; hacer propaganda en horas de trabajo; acosar sexualmente a cualquier persona; revelar información confidencial. <span class="art-ref">(Art. 47, fracciones I a VII, LFT — causales de rescisión sin responsabilidad para el patrón)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">DÉCIMA SEXTA. Sanciones administrativas.</span>
   La empresa podrá sancionar a sus trabajadores, amonestándolos o suspendiéndolos, respetando en todo momento el derecho del trabajador a ser oído antes de la aplicación de cualquier sanción. La suspensión como medida disciplinaria no podrá exceder de ocho días y no se impondrán multas a los trabajadores.<br/><br/>
   <strong>Procedimiento:</strong><br/>
   1) Amonestación verbal (máximo 3 eventos)<br/>
   2) Llamado de atención por escrito<br/>
   3) Suspensión sin goce de sueldo (máximo 8 días)<br/>
-  4) Rescisión de contrato (conforme al Art. 47 de la LFT)
+  4) Rescisión de contrato <span class="art-ref">(Art. 87 Reglamento Federal de Seguridad, Higiene y Medio Ambiente de Trabajo — procedimiento disciplinario; Art. 47 LFT — causales de rescisión)</span>
 </div>
 
 <div class="clause">
-  <span class="clause-num">SÉPTIMA. Obligaciones de los trabajadores.</span>
-  El personal deberá: informar a sus jefes los asuntos relevantes; dirigirse en primera instancia con sus jefes inmediatos para aclaración de dudas; portar vestimenta adecuada al puesto; evitar distracciones dentro del horario laboral; utilizar lenguaje formal, respetuoso y no discriminatorio; asistir a cursos obligatorios; utilizar adecuadamente los equipos proporcionados.
+  <span class="clause-num">DÉCIMA SÉPTIMA. Trabajo libre de violencia, con igualdad y sin discriminación.</span>
+  En esta fuente laboral los trabajadores deberán desempeñar sus tareas en un ambiente libre de violencia e igualdad. Se debe evitar el acoso o mobbing entre compañeros, la discriminación laboral por origen étnico, nacionalidad, género, edad, discapacidad, condición social, religión, preferencia sexual u opinión. El patrón está obligado a fomentar un ambiente de trabajo libre de violencia y discriminación. <span class="art-ref">(Art. 2 LFT — principios de igualdad y no discriminación; Art. 3 Bis LFT — prevención y sanción del hostigamiento y acoso)</span>
 </div>
 
 <div class="clause">
-  <span class="clause-num">OCTAVA. Prohibiciones.</span>
-  Está prohibido al personal: ejecutar actos que pongan en peligro su seguridad o la de terceros; faltar al trabajo sin causa justificada; substraer materiales o útiles de la empresa; presentarse en estado de embriaguez o bajo influencia de sustancias; hacer propaganda en horas de trabajo; acosar sexualmente a cualquier persona.
+  <span class="clause-num">DÉCIMA OCTAVA. Seguridad e higiene.</span>
+  El patrón estará obligado a prestar atención médica preventiva a los trabajadores, así como a cumplir con las disposiciones de seguridad e higiene que establezcan las normas oficiales. Los trabajadores deberán cumplir las medidas preventivas y de seguridad en el trabajo que determine el patrón. <span class="art-ref">(Art. 52 LFT — obligación del patrón de prestar atención médica y prevenir riesgos; Art. 55 LFT — constancias de capacITACIÓN en materia de seguridad)</span>
 </div>
 
 <div class="clause">
-  <span class="clause-num">NOVENA. Trabajo libre de violencia, con igualdad y sin discriminación.</span>
-  En esta fuente laboral los trabajadores deberán desempeñar sus tareas en un ambiente libre de violencia e igualdad. Se debe evitar el acoso o mobbing entre compañeros, la discriminación laboral por origen étnico, nacionalidad, género, edad, discapacidad, condición social, religión, preferencia sexual u opinión.
+  <span class="clause-num">DÉCIMA NOVENA. Registro de asistencia.</span>
+  El patrón llevará un registro de control de asistencia que contendrá la fecha y hora de entrada y salida de los trabajadores. El patrón deberá entregar al trabajador una copia del registro en cada pago. <span class="art-ref">(Art. 82 LFT — obligación del patrón de llevar registros y entregar copias al trabajador)</span>
 </div>
 
 <div class="clause">
-  En caso de incumplir con el presente reglamento, será motivo de sanciones y/o rescisión de contrato sin responsabilidad alguna para la institución.
+  <span class="clause-num">VIGÉSIMA. Protección de datos personales.</span>
+  El patrón deberá proteger los datos personales de los trabajadores conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares. Queda prohibido el uso indebido de la información personal de los trabajadores. <span class="art-ref">(Ley Federal de Protección de Datos Personales en Posesión de los Particulares; Art. 20 LFT — obligación de guarda de reserva)</span>
 </div>
+
+<div class="clause">
+  <span class="clause-num">VIGÉSIMA PRIMERA. Terminación y rescisión.</span>
+  La relación laboral podrá terminar por mutuo acuerdo, por muerte del trabajador, por incapacidad total o permanente, por fuerza mayor o caso fortuito, por liquidación del establecimiento, o por las causas previstas en los artículos 43, 46, 47, 50, 51, 53, 55, 56 y 59 de la Ley Federal del Trabajo. <span class="art-ref">(Arts. 33, 43, 46 a 59 LFT — causales de terminación, rescisión y liquidación)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">VIGÉSIMA SEGUNDA. Prescripción de acciones.</span>
+  Las acciones de los trabajadores derivadas de la relación de trabajo prescribirán en un año contado a partir del día en que pudieron ejercerlas. Las acciones del patrón prescribirán en un año. <span class="art-ref">(Art. 113 LFT — prescripción de acciones laborales: 1 año)</span>
+</div>
+
+<div class="clause">
+  <span class="clause-num">VIGÉSIMA TERCERA. Legislación aplicable.</span>
+  Para todo lo no previsto en el presente reglamento serán aplicables las disposiciones de la Ley Federal del Trabajo, la Ley del Seguro Social, el Reglamento Federal de Seguridad, Higiene y Medio Ambiente de Trabajo, y demás disposiciones aplicables. <span class="art-ref">(Art. 3 LFT — jerarquía normativa laboral; Art. 424 LFT — contenido mínimo del RIT)</span>
+</div>
+
+<p style="text-align:justify;margin-top:20px">
+  En caso de incumplimiento con el presente Reglamento Interior de Trabajo, será motivo de las sanciones administrativas correspondientes y, en su caso, de la rescisión de la relación laboral sin responsabilidad para el patrón, conforme a los artículos 47 y 424 de la Ley Federal del Trabajo.
+</p>
 
 <div class="signature-grid">
   <div><div class="sig-line">Representante de los trabajadores<br/>Nombre y firma</div></div>
