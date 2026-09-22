@@ -400,6 +400,15 @@ export const DEFAULT_RIT_GENERICO = `
   <div><div class="sig-line">Representante del patrón<br/>Nombre y firma</div></div>
 </div>
 
+<p style="text-align:justify;margin-top:30px;font-size:11px">
+  <strong>Declaro haber leído y comprendido el presente Reglamento Interior de Trabajo, y me comprometo a cumplirlo en su totalidad.</strong>
+</p>
+
+<div style="margin-top:40px;display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:end">
+  <div style="border-top:1px solid #333;padding-top:4px;text-align:center;font-size:11px">Nombre completo del trabajador</div>
+  <div style="border-top:1px solid #333;padding-top:4px;text-align:center;font-size:11px">Firma</div>
+</div>
+
 </body>
 </html>
 `.trim();
