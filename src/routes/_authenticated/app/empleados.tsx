@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { listEmployees, upsertEmployee, deleteEmployee } from "@/lib/payroll.functions";
-import { generateContratoTrabajo, generateRenuncia } from "@/lib/document-templates.functions";
+import { generateContratoTrabajo, generateRenuncia, generateRIT } from "@/lib/document-templates.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { calcSDI } from "@/lib/payroll.calc";
@@ -129,7 +129,9 @@ function Empleados() {
 
   const genContrato = useServerFn(generateContratoTrabajo);
   const genRenuncia = useServerFn(generateRenuncia);
+  const genRit = useServerFn(generateRIT);
   const [contratoDialog, setContratoDialog] = useState<{ emp: any } | null>(null);
+  const [ritDialog, setRitDialog] = useState(false);
 
   async function generarContrato(emp: any) {
     setContratoDialog({ emp });
@@ -164,6 +166,23 @@ function Empleados() {
         setTimeout(() => win.print(), 400);
       }
       toast.success(`Carta de renuncia de ${r.nombreEmp} generada`);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
+  async function generarRIT(giro: string) {
+    try {
+      const r = await genRit({ data: { organizationId: org.id, giro: giro as any } });
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(r.html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => win.print(), 400);
+      }
+      toast.success("RIT generado");
+      setRitDialog(false);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -365,6 +384,7 @@ function Empleados() {
       <PageHeader title="Empleados" description="Plantilla activa para nómina"
         actions={<>
           <button onClick={descargarPlantillaAlta} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm hover:bg-secondary"><FileText className="h-4 w-4"/>Plantilla de alta</button>
+          <button onClick={() => setRitDialog(true)} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm hover:bg-secondary"><FileSignature className="h-4 w-4"/>Generar RIT</button>
           <button onClick={() => { setEditing(null); setOpen(true); }} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"><Plus className="h-4 w-4"/>Nuevo</button>
         </>} />
       <div className="p-4 sm:p-6 lg:p-8">
@@ -473,6 +493,12 @@ function Empleados() {
           emp={contratoDialog.emp}
           onClose={() => setContratoDialog(null)}
           onConfirm={(opciones) => confirmarGenerarContrato(contratoDialog.emp, opciones)}
+        />
+      )}
+      {ritDialog && (
+        <RitDialog
+          onClose={() => setRitDialog(false)}
+          onConfirm={generarRIT}
         />
       )}
     </div>
@@ -686,6 +712,46 @@ function ContratoDialog({
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onClose} className="rounded px-3 py-1.5 text-sm">Cancelar</button>
           <button onClick={() => onConfirm(f)} className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90">Generar Contrato</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RitDialog({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void;
+  onConfirm: (giro: string) => void;
+}) {
+  const [giro, setGiro] = useState("comercio");
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-md space-y-4 rounded-xl border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Generar Reglamento Interior de Trabajo</h3>
+          <button onClick={onClose} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
+        </div>
+
+        <label className="text-xs">
+          Giro del centro de trabajo
+          <select value={giro} onChange={(e) => setGiro(e.target.value)} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm">
+            <option value="comercio">Comercio</option>
+            <option value="servicios">Servicios</option>
+            <option value="industrial">Industrial</option>
+            <option value="salud">Salud</option>
+          </select>
+        </label>
+
+        <p className="text-xs text-muted-foreground">
+          Se generará el RIT con la plantilla estándar del giro seleccionado. Si ya existe una plantilla personalizada, se usará esa.
+        </p>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={onClose} className="rounded px-3 py-1.5 text-sm">Cancelar</button>
+          <button onClick={() => onConfirm(giro)} className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90">Generar RIT</button>
         </div>
       </div>
     </div>
