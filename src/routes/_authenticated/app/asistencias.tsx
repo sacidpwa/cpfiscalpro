@@ -205,11 +205,11 @@ function AsistenciasPage() {
         ) : !filteredEmployees.length ? (
           <EmptyState icon={Search} title="Sin coincidencias" description="Ajusta el filtro o limpia la búsqueda." />
         ) : (
-          <div className="overflow-x-auto rounded-lg border bg-card">
-            <table className="w-full text-xs border-collapse">
-              <thead className="sticky top-0 bg-card">
+          <div className="max-h-[calc(100dvh-13rem)] overflow-auto rounded-lg border bg-card">
+            <table className="w-full min-w-max text-xs border-collapse">
+              <thead className="sticky top-0 z-20 bg-card">
                 <tr>
-                  <th className="sticky left-0 z-10 bg-card border-b border-r px-3 py-2 text-left font-semibold min-w-[200px]">Empleado</th>
+                  <th className="sticky left-0 z-30 bg-card border-b border-r px-3 py-2 text-left font-semibold min-w-[180px] sm:min-w-[200px]">Empleado</th>
                   {dayList.map((d) => {
                     const dt = new Date(year, month - 1, d);
                     const dow = dt.getDay();
@@ -219,7 +219,7 @@ function AsistenciasPage() {
                     return (
                       <th key={d}
                         title={holiday ?? undefined}
-                        className={`border-b border-r px-1.5 py-2 text-center font-medium tabular-nums ${
+                        className={`border-b border-r px-1.5 py-2 text-center font-medium tabular-nums min-w-[2.25rem] ${
                           holiday ? "bg-amber-200/50 text-amber-900 dark:bg-amber-400/20 dark:text-amber-300" :
                           weekend ? "bg-secondary/50 text-muted-foreground" : ""
                         }`}>
@@ -228,15 +228,15 @@ function AsistenciasPage() {
                       </th>
                     );
                   })}
-                  <th className="border-b px-2 py-2 text-center font-semibold">Totales</th>
+                  <th className="sticky right-0 z-20 border-b border-l bg-card px-2 py-2 text-center font-semibold min-w-[5.5rem]">Totales</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEmployees.map((emp: any) => {
                   const counts: Record<string, number> = {};
                   return (
-                    <tr key={emp.id} className="border-b hover:bg-secondary/20">
-                      <td className="sticky left-0 z-10 bg-card border-r px-3 py-2">
+                    <tr key={emp.id} className="group border-b hover:bg-secondary/20">
+                      <td className="sticky left-0 z-10 bg-card border-r px-3 py-2 group-hover:bg-secondary/20">
                         <div className="font-medium">{emp.nombre} {emp.apellido_paterno} {emp.apellido_materno ?? ""}</div>
                         <div className="text-[10px] text-muted-foreground">#{emp.numero} · {emp.departamento ?? emp.puesto ?? ""}</div>
                       </td>
@@ -263,7 +263,7 @@ function AsistenciasPage() {
                                   ? `Asistencia (implícita)${holiday ? " — " + holiday : ""} · click para cambiar`
                                   : `${t?.nombre ?? code}${holiday ? " · " + holiday : ""} — click para editar`
                               }
-                              className="h-9 w-9 text-[10px] font-bold hover:bg-secondary/40 transition-colors relative"
+                              className="h-8 w-8 sm:h-9 sm:w-9 text-[10px] font-bold hover:bg-secondary/40 transition-colors relative"
                               style={!renderEmpty ? {
                                 background: t?.color ?? "transparent",
                                 color: t ? "white" : "var(--color-muted-foreground)",
@@ -279,7 +279,7 @@ function AsistenciasPage() {
                           </td>
                         );
                       })}
-                      <td className="px-2 py-2 text-center">
+                      <td className="sticky right-0 z-10 border-l bg-card px-2 py-2 text-center group-hover:bg-secondary/20">
                         <div className="flex flex-wrap items-center justify-center gap-1">
                           {Object.entries(counts).map(([c, n]) => (
                             <span key={c} className="rounded px-1 py-0.5 text-[10px] font-semibold text-white tabular-nums" style={{ background: typeMap.get(c)?.color ?? "#94a3b8" }}>
@@ -391,78 +391,80 @@ function CellPicker({ types, current, empName, fecha, onClose, onSave }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-lg border bg-card p-5 shadow-xl">
-        <div className="mb-3 flex items-start justify-between">
-          <div>
-            <h2 className="text-base font-semibold">{empName}</h2>
-            <p className="text-xs text-muted-foreground tabular-nums">{fecha}</p>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4" onClick={onClose}>
+      <div className="flex min-h-full items-start justify-center sm:items-center">
+        <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-lg border bg-card p-4 shadow-xl sm:p-5">
+          <div className="mb-3 flex items-start justify-between">
+            <div>
+              <h2 className="text-base font-semibold">{empName}</h2>
+              <p className="text-xs text-muted-foreground tabular-nums">{fecha}</p>
+            </div>
+            <button onClick={onClose} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
           </div>
-          <button onClick={onClose} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
-        </div>
 
-        <div className="mb-3">
-          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Código principal</div>
-          <div className="flex flex-wrap gap-1.5">
-            {types.map((t, i) => (
-              <button
-                key={t.codigo}
-                ref={i === 0 ? firstRef : undefined}
-                onClick={() => selectPrimary(t.codigo)}
-                className={`flex items-center gap-1.5 rounded border px-2 py-1 text-xs font-medium transition ${primary === t.codigo ? "ring-2 ring-primary" : "hover:bg-secondary"}`}
-                style={{ borderColor: primary === t.codigo ? t.color : undefined }}
-              >
-                <span className="grid h-4 w-4 place-items-center rounded text-[9px] font-bold text-white" style={{ background: t.color }}>{t.codigo}</span>
-                {t.nombre}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <div className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <span>Códigos adicionales (opcional)</span>
-            <span className="text-[10px] font-normal normal-case text-muted-foreground/70">solo combinables con el principal</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {types.filter((t) => t.codigo !== primary).map((t) => {
-              const on = extras.includes(t.codigo);
-              const allowed = on || canAddExtra(t.codigo);
-              return (
+          <div className="mb-3">
+            <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Código principal</div>
+            <div className="flex flex-wrap gap-1.5">
+              {types.map((t, i) => (
                 <button
                   key={t.codigo}
-                  onClick={() => toggleExtra(t.codigo)}
-                  disabled={!allowed}
-                  title={!allowed ? `"${t.nombre}" no es compatible con el código principal` : undefined}
-                  className={`flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition ${on ? "ring-1 ring-primary bg-secondary" : "hover:bg-secondary"} ${!allowed ? "cursor-not-allowed opacity-40" : ""}`}
+                  ref={i === 0 ? firstRef : undefined}
+                  onClick={() => selectPrimary(t.codigo)}
+                  className={`flex items-center gap-1.5 rounded border px-2 py-1 text-xs font-medium transition ${primary === t.codigo ? "ring-2 ring-primary" : "hover:bg-secondary"}`}
+                  style={{ borderColor: primary === t.codigo ? t.color : undefined }}
                 >
-                  {on ? <Check className="h-3 w-3" /> : <span className="h-3 w-3" />}
                   <span className="grid h-4 w-4 place-items-center rounded text-[9px] font-bold text-white" style={{ background: t.color }}>{t.codigo}</span>
                   {t.nombre}
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="mb-3 grid grid-cols-3 gap-3">
-          <Field label="HE dobles"><input type="number" min={0} max={24} step="0.5" value={hed} onChange={(e) => setHed(Number(e.target.value))} className="inp"/></Field>
-          <Field label="HE triples"><input type="number" min={0} max={24} step="0.5" value={het} onChange={(e) => setHet(Number(e.target.value))} className="inp"/></Field>
-          <Field label="Retardo (min)"><input type="number" min={0} max={720} value={ret} onChange={(e) => setRet(Number(e.target.value))} className="inp"/></Field>
-        </div>
+          <div className="mb-3">
+            <div className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span>Códigos adicionales (opcional)</span>
+              <span className="text-[10px] font-normal normal-case text-muted-foreground/70">solo combinables con el principal</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {types.filter((t) => t.codigo !== primary).map((t) => {
+                const on = extras.includes(t.codigo);
+                const allowed = on || canAddExtra(t.codigo);
+                return (
+                  <button
+                    key={t.codigo}
+                    onClick={() => toggleExtra(t.codigo)}
+                    disabled={!allowed}
+                    title={!allowed ? `"${t.nombre}" no es compatible con el código principal` : undefined}
+                    className={`flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition ${on ? "ring-1 ring-primary bg-secondary" : "hover:bg-secondary"} ${!allowed ? "cursor-not-allowed opacity-40" : ""}`}
+                  >
+                    {on ? <Check className="h-3 w-3" /> : <span className="h-3 w-3" />}
+                    <span className="grid h-4 w-4 place-items-center rounded text-[9px] font-bold text-white" style={{ background: t.color }}>{t.codigo}</span>
+                    {t.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        <Field label="Observaciones">
-          <input value={obs} onChange={(e) => setObs(e.target.value)} maxLength={500} className="inp"/>
-        </Field>
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+            <Field label="HE dobles"><input type="number" min={0} max={24} step="0.5" value={hed} onChange={(e) => setHed(Number(e.target.value))} className="inp"/></Field>
+            <Field label="HE triples"><input type="number" min={0} max={24} step="0.5" value={het} onChange={(e) => setHet(Number(e.target.value))} className="inp"/></Field>
+            <Field label="Retardo (min)"><input type="number" min={0} max={720} value={ret} onChange={(e) => setRet(Number(e.target.value))} className="inp"/></Field>
+          </div>
 
-        <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md border bg-card px-3 py-1.5 text-sm hover:bg-secondary">Cancelar</button>
-          <button
-            onClick={() => onSave({ incident_code: primary, extra_codes: extras, horas_extra_dobles: hed, horas_extra_triples: het, minutos_retardo: ret, observaciones: obs || undefined })}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-          >Guardar</button>
+          <Field label="Observaciones">
+            <input value={obs} onChange={(e) => setObs(e.target.value)} maxLength={500} className="inp"/>
+          </Field>
+
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <button onClick={onClose} className="rounded-md border bg-card px-3 py-1.5 text-sm hover:bg-secondary">Cancelar</button>
+            <button
+              onClick={() => onSave({ incident_code: primary, extra_codes: extras, horas_extra_dobles: hed, horas_extra_triples: het, minutos_retardo: ret, observaciones: obs || undefined })}
+              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+            >Guardar</button>
+          </div>
+          <style>{`.inp{width:100%;border:1px solid var(--color-border);background:var(--color-background);border-radius:6px;padding:.35rem .55rem;font-size:.8rem}`}</style>
         </div>
-        <style>{`.inp{width:100%;border:1px solid var(--color-border);background:var(--color-background);border-radius:6px;padding:.35rem .55rem;font-size:.8rem}`}</style>
       </div>
     </div>
   );
