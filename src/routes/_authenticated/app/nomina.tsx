@@ -3,13 +3,13 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { listPayrollPeriods, createPayrollPeriod, runPayroll, getPeriodReceipts, deletePayrollPeriod, updatePayrollPeriod, recalculateReceipt } from "@/lib/payroll.functions";
-import { stampPayrollReceipt, stampPayrollPeriodBatch, listReceiptStamps, getCfdiDownloadUrl, cancelCfdiStamp, reconcilePeriodWithFacturapi, listFacturapiPeriodInvoices, getCancellationReceipt, cancelFacturapiInvoice, syncStampStatuses } from "@/lib/cfdi.functions";
+import { stampPayrollReceipt, stampPayrollPeriodBatch, listReceiptStamps, getCfdiDownloadUrl, cancelCfdiStamp, reconcilePeriodWithFacturapi, resyncPeriodStamps, listFacturapiPeriodInvoices, getCancellationReceipt, cancelFacturapiInvoice, syncStampStatuses } from "@/lib/cfdi.functions";
 import { getBillingConfig } from "@/lib/billing.functions";
 import { emailPeriodReceipts, listPeriodEmailLogs, emailSinglePayrollReceipt } from "@/lib/email.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
 import { fmtMoney, fmtDate } from "@/lib/format";
-import { Receipt, Plus, Play, X, FileText, Download, Trash2, Stamp, CheckCircle2, AlertCircle, FileDown, Pencil, Mail, History, Info, Eye, RefreshCw, ChevronLeft, ChevronRight, ListChecks, ChevronDown, Loader2 } from "lucide-react";
+import { Receipt, Plus, Play, X, FileText, Download, Trash2, Stamp, CheckCircle2, AlertCircle, FileDown, Pencil, Mail, History, Info, Eye, RefreshCw, ChevronLeft, ChevronRight, ListChecks, ChevronDown, Loader2, Link2 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ReceiptPreviewDialog } from "@/components/payroll/ReceiptPreviewDialog";
 
@@ -237,12 +237,15 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
   const syncStamps = useServerFn(syncStampStatuses);
   const recalcOne = useServerFn(recalculateReceipt);
   const reconcile = useServerFn(reconcilePeriodWithFacturapi);
+  const resync = useServerFn(resyncPeriodStamps);
   const [sending, setSending] = useState(false);
   const [sendingOne, setSendingOne] = useState<string | null>(null);
   const [recalcing, setRecalcing] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [bulkStamping, setBulkStamping] = useState(false);
   const [reconciling, setReconciling] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
+  const [resyncRes, setResyncRes] = useState<any | null>(null);
   const [reconcileRes, setReconcileRes] = useState<any[] | null>(null);
   const [showFapiList, setShowFapiList] = useState(false);
   const [downloadingZip, setDownloadingZip] = useState(false);
@@ -585,6 +588,32 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
               <div>
                 <div className="font-medium">Conciliar contra FacturAPI</div>
                 <div className="text-[11px] text-muted-foreground">Compara totales locales vs CFDI vigentes y enlaza huérfanos.</div>
+              </div>
+            </button>
+            <button
+              onClick={async () => {
+                setResyncing(true);
+                const t = toast.loading("Revinculando timbres con FacturAPI…");
+                try {
+                  const res = await resync({ data: { periodId } });
+                  setResyncRes(res);
+                  await qc.invalidateQueries({ queryKey: ["stamps", periodId] });
+                  const extra = res.relinked + res.cancelados;
+                  if (extra > 0) {
+                    toast.success(`${res.relinked} timbres recuperados · ${res.cancelados} marcados como cancelados`, { id: t, duration: 7000 });
+                  } else {
+                    toast.success("No había timbres huérfanos en este periodo", { id: t, duration: 5000 });
+                  }
+                } catch (e: any) { toast.error(e.message ?? "Error", { id: t }); }
+                finally { setResyncing(false); }
+              }}
+              disabled={resyncing}
+              className="flex w-full items-start gap-2 rounded px-2 py-2 text-left text-xs hover:bg-secondary disabled:opacity-50"
+            >
+              <Link2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <div>
+                <div className="font-medium">Recuperar timbres perdidos</div>
+                <div className="text-[11px] text-muted-foreground">Re-vincula los CFDI ya timbrados tras un recálculo del periodo.</div>
               </div>
             </button>
             <button
@@ -964,6 +993,53 @@ function RecibosView({ periodId, period, fetcher, incluirImss }: { periodId: str
 
       {showLog && <EmailLogModal periodId={periodId} period={period} onClose={() => setShowLog(false)} />}
       <ReceiptPreviewDialog receiptId={previewId} onClose={() => setPreviewId(null)} />
+      {resyncRes && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setResyncRes(null)}>
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-lg bg-card shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <h3 className="font-semibold">Timbres recuperados</h3>
+                <p className="text-xs text-muted-foreground">
+                  {resyncRes.relinked} re-vinculados · {resyncRes.cancelados} cancelados · {resyncRes.sinCambio} ya estaban correctos
+                </p>
+              </div>
+              <button onClick={() => setResyncRes(null)} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="overflow-auto p-4" style={{ maxHeight: "calc(85vh - 60px)" }}>
+              {!resyncRes.details?.length ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No se encontraron timbres huérfanos.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                      <th className="p-2">Empleado</th>
+                      <th className="p-2 text-right">Total CFDI</th>
+                      <th className="p-2">Resultado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resyncRes.details.map((row: any, i: number) => (
+                      <tr key={`${row.stampId}-${i}`} className="border-b">
+                        <td className="p-2">
+                          <div className="font-medium">{row.empleado ?? row.rfc ?? "—"}</div>
+                          <div className="font-mono text-[10px] text-muted-foreground">{(row.uuid ?? "").slice(0, 18)}{row.uuid ? "…" : ""}</div>
+                        </td>
+                        <td className="p-2 text-right text-money">{row.total_facturapi != null ? fmtMoney(row.total_facturapi) : "—"}</td>
+                        <td className="p-2 text-xs">
+                          {row.accion === "relinked" && <span className="font-semibold text-emerald-700 dark:text-emerald-400">Timbre recuperado</span>}
+                          {row.accion === "relinked_cancelado" && <span className="font-semibold text-amber-700 dark:text-amber-400">Marcado como cancelado</span>}
+                          {row.accion === "sin_recibo" && <span className="text-muted-foreground">Sin recibo en este periodo</span>}
+                          {row.accion === "error" && <span className="text-destructive">{row.message}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {reconcileRes && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setReconcileRes(null)}>
           <div className="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-lg bg-card shadow-xl" onClick={(e) => e.stopPropagation()}>

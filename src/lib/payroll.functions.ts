@@ -219,6 +219,7 @@ export const runPayroll = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => calcRunSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: period, error: pe } = await supabase
       .from("payroll_periods").select("*").eq("id", data.periodId).single();
     if (pe || !period) throw new Error(pe?.message ?? "Periodo no encontrado");
@@ -259,11 +260,29 @@ export const runPayroll = createServerFn({ method: "POST" })
       }
     });
 
-    // borrar recibos previos del periodo (lines cascadean por FK)
+    // Borrar recibos previos del periodo (lines cascadean por FK).
+    // Antes de borrarlos se aparta el vínculo con los CFDI ya timbrados:
+    // los recibos se recrean con UUIDs nuevos, así que sin esteSnapshot los
+    // `cfdi_stamps` quedarían apuntando a IDs inexistentes y los timbres
+    // válidos aparecerían como "sin timbrar" (el CFDI sigue vigente ante el SAT).
     const { data: prevReceipts } = await supabase
-      .from("payroll_receipts").select("id").eq("payroll_period_id", period.id);
+      .from("payroll_receipts").select("id, employee_id").eq("payroll_period_id", period.id);
     const prevIds = (prevReceipts ?? []).map((r: any) => r.id);
+    const stampByEmpleado = new Map<string, any>();
     if (prevIds.length) {
+      const { data: prevStamps } = await (supabaseAdmin as any)
+        .from("cfdi_stamps")
+        .select("id, reference_id, estatus, facturapi_id")
+        .eq("kind", "nomina")
+        .in("reference_id", prevIds);
+      const empPorRecibo = new Map<string, string>(
+        (prevReceipts ?? []).map((r: any) => [r.id, r.employee_id]),
+      );
+      for (const st of (prevStamps ?? []) as any[]) {
+        const empId = empPorRecibo.get(st.reference_id);
+        if (empId) stampByEmpleado.set(empId, st);
+      }
+
       await supabase.from("payroll_receipt_lines").delete().in("receipt_id", prevIds);
       const { error: delErr } = await supabase
         .from("payroll_receipts").delete().in("id", prevIds);
@@ -368,6 +387,17 @@ export const runPayroll = createServerFn({ method: "POST" })
       await supabase.from("payroll_receipt_lines").insert(
         lines.map((l) => ({ ...l, receipt_id: receipt.id, organization_id: data.organizationId })),
       );
+
+      // Re-apuntar el CFDI previo de este trabajador al recibo nuevo para que
+      // el timbre no se pierda al recalcular el periodo.
+      const prevStamp = stampByEmpleado.get(emp.id);
+      if (prevStamp) {
+        await (supabaseAdmin as any)
+          .from("cfdi_stamps")
+          .update({ reference_id: receipt.id })
+          .eq("id", prevStamp.id);
+      }
+
       results.push({ empleado: emp.nombre, neto: netoPagar });
     }
 

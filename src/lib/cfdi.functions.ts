@@ -203,6 +203,187 @@ export const syncStampStatuses = createServerFn({ method: "POST" })
     return { synced };
   });
 
+// Timbres de nómina cuyo `reference_id` ya no corresponde a ningún recibo
+// vigente de la organización. La comparación es GLOBAL (no por periodo) a
+// propósito: si se filtrara sólo por el periodo actual, los timbres de
+// periodos vecinos —que sí están bien enlazados— se verían como huérfanos y
+// se re-apuntarían al recibo equivocado.
+async function findOrphanStamps(supabaseAdmin: any, orgId: string): Promise<any[]> {
+  const [{ data: stamps }, { data: recs }] = await Promise.all([
+    (supabaseAdmin as any)
+      .from("cfdi_stamps")
+      .select("id, reference_id, facturapi_id, uuid_sat, estatus, total, fecha_timbrado")
+      .eq("kind", "nomina")
+      .eq("organization_id", orgId)
+      .not("facturapi_id", "is", null)
+      .order("created_at", { ascending: false }),
+    supabaseAdmin
+      .from("payroll_receipts")
+      .select("id")
+      .eq("organization_id", orgId),
+  ]);
+  const vivos = new Set<string>((recs ?? []).map((r: any) => r.id));
+  return ((stamps ?? []) as any[]).filter((s) => !vivos.has(s.reference_id));
+}
+
+// =====================================================================
+// Re-vincula timbres de nómina huérfanos con los recibos vigentes.
+//
+// Al recalcular un periodo, `runPayroll` borra los recibos y los recrea
+// con UUIDs nuevos, dejando los `cfdi_stamps` apuntando a IDs que ya no
+// existen. El CFDI sigue siendo válido ante el SAT: sólo se perdió el
+// enlace local. Esta función resuelve la identidad del trabajador
+// consultando cada huérfano a FacturAPI por su `facturapi_id` (obtiene
+// el RFC del receptor) y lo re-apunta al recibo vigente de ese trabajador.
+// =====================================================================
+export const resyncPeriodStamps = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ periodId: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: period, error: pe } = await supabaseAdmin
+      .from("payroll_periods")
+      .select("id, organization_id, numero, ejercicio, fecha_inicio, fecha_fin")
+      .eq("id", data.periodId)
+      .single();
+    if (pe || !period) throw new Error(pe?.message ?? "Periodo no encontrado");
+    await assertCanStamp(supabase, period.organization_id, userId);
+    const { key, environment } = await getApiKey(period.organization_id);
+
+    const { data: receipts, error: re } = await supabaseAdmin
+      .from("payroll_receipts")
+      .select("id, employee_id, neto_pagar, total_percepciones, employee:employees(numero, nombre, apellido_paterno, apellido_materno, rfc)")
+      .eq("payroll_period_id", data.periodId);
+    if (re) throw new Error(re.message);
+    const recs = (receipts ?? []) as any[];
+    if (!recs.length) return { relinked: 0, cancelados: 0, sinCambio: 0, details: [] as any[] };
+
+    // RFC (normalizado) -> recibo vigente. Si un RFC aparece repetido
+    // ganamos el primer recibo; no debería ocurrir dentro de un periodo.
+    const byRfc = new Map<string, any>();
+    for (const r of recs) {
+      const rfc = String(r.employee?.rfc ?? "").trim().toUpperCase();
+      if (rfc && !byRfc.has(rfc)) byRfc.set(rfc, r);
+    }
+
+    const huérfanos = await findOrphanStamps(supabaseAdmin, period.organization_id);
+    if (!huérfanos.length) {
+      return { relinked: 0, cancelados: 0, sinCambio: 0, details: [] as any[] };
+    }
+
+    // Rango del periodo con margen de ±3 días (el timbrado puede
+    // ocurrir fuera de la fecha del periodo, igual que en la conciliación).
+    const desde = new Date(period.fecha_inicio + "T00:00:00");
+    const hasta = new Date(period.fecha_fin + "T23:59:59");
+    desde.setDate(desde.getDate() - 3);
+    hasta.setDate(hasta.getDate() + 3);
+
+    // Resolver cada huérfano contra FacturAPI y agrupar por RFC para elegir
+    // el CFDI correcto: un trabajador puede tener varios timbres (p. ej. el
+    // canceled del intento anterior y el vigente tras el recálculo).
+    const candidatos = new Map<string, any[]>();
+    const descartados: any[] = [];
+
+    for (const s of huérfanos) {
+      let inv: any = null;
+      try {
+        inv = await callFacturapi(key, `/invoices/${s.facturapi_id}`);
+      } catch {
+        descartados.push({
+          stampId: s.id, accion: "error", uuid: s.uuid_sat,
+          message: "No se pudo consultar el CFDI en FacturAPI",
+        });
+        continue;
+      }
+      if (!inv?.id) continue;
+
+      const fechaInv = inv.date ? new Date(inv.date) : null;
+      if (fechaInv && (fechaInv < desde || fechaInv > hasta)) continue; // es de otro periodo
+
+      const rfc = String(inv.customer?.tax_id ?? "").trim().toUpperCase();
+      if (!rfc || !byRfc.has(rfc)) continue; // no corresponde a este periodo
+
+      if (!candidatos.has(rfc)) candidatos.set(rfc, []);
+      (candidatos.get(rfc) as any[]).push({ stamp: s, inv, rfc });
+    }
+
+    const detalles: any[] = [...descartados];
+    let relinked = 0;
+    let cancelados = 0;
+    let sinCambio = 0;
+
+    for (const [rfc, lista] of candidatos) {
+      const recibo = byRfc.get(rfc)!;
+      const neto = Number(recibo.neto_pagar ?? 0);
+
+      // Preferencia: coincidencia exacta de total; después el vigente más
+      // reciente. Así se descarta el CFDI viejo (sin la falta) cuando el
+      // recibo ya refleja el recálculo.
+      const vigente = lista.filter((c) => c.inv.status !== "canceled");
+      const pool = vigente.length ? vigente : lista;
+      const elegido =
+        pool.find((c) => Math.abs(Number(c.inv.total ?? 0) - neto) < 0.02) ??
+        pool.sort((a, b) => new Date(b.inv.date ?? 0).getTime() - new Date(a.inv.date ?? 0).getTime())[0];
+      if (!elegido) continue;
+
+      const { stamp: s, inv } = elegido;
+
+      // Si este recibo ya tiene un timbre vigente, no se toca nada.
+      const { data: yaVinculado } = await (supabaseAdmin as any)
+        .from("cfdi_stamps")
+        .select("id, estatus, uuid_sat")
+        .eq("kind", "nomina")
+        .eq("reference_id", recibo.id)
+        .eq("estatus", "timbrado")
+        .not("facturapi_id", "is", null);
+      if ((yaVinculado ?? []).length) {
+        sinCambio++;
+        continue;
+      }
+
+      const estatusFapi = String(inv.status ?? "");
+      const nuevoEstatus = estatusFapi === "canceled" ? "cancelado" : "timbrado";
+
+      const { error: ue } = await (supabaseAdmin as any)
+        .from("cfdi_stamps")
+        .update({
+          reference_id: recibo.id,
+          estatus: nuevoEstatus,
+          ambiente: environment,
+          uuid_sat: inv.uuid ?? s.uuid_sat,
+          fecha_timbrado: inv.date ?? s.fecha_timbrado,
+          total: Number(inv.total ?? s.total ?? 0),
+          error_message: null,
+        })
+        .eq("id", s.id);
+      if (ue) {
+        detalles.push({ stampId: s.id, accion: "error", rfc, message: ue.message });
+        continue;
+      }
+
+      if (nuevoEstatus === "cancelado") cancelados++;
+      else relinked++;
+
+      detalles.push({
+        stampId: s.id,
+        accion: nuevoEstatus === "cancelado" ? "relinked_cancelado" : "relinked",
+        receiptId: recibo.id,
+        empleado: [recibo.employee?.numero, recibo.employee?.nombre, recibo.employee?.apellido_paterno, recibo.employee?.apellido_materno]
+          .filter(Boolean).join(" "),
+        rfc,
+        uuid: inv.uuid,
+        total_facturapi: Number(inv.total ?? 0),
+        neto_actual: Number(recibo.neto_pagar ?? 0),
+      });
+    }
+
+    return { relinked, cancelados, sinCambio, details: detalles };
+  });
+
 export const stampPayrollReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
