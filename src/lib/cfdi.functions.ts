@@ -461,7 +461,7 @@ export const stampPayrollPeriodBatch = createServerFn({ method: "POST" })
     };
   });
 
-async function stampPayrollReceiptInternal({
+export async function stampPayrollReceiptInternal({
   receiptId,
   supabase,
   supabaseAdmin,
@@ -469,6 +469,9 @@ async function stampPayrollReceiptInternal({
   apiKeyInfo,
   skipPermissionCheck = false,
   forceStamp = false,
+  relatedDocuments,
+  folioOverride,
+  deferStampInsert = false,
 }: {
   receiptId: string;
   supabase: any;
@@ -477,6 +480,18 @@ async function stampPayrollReceiptInternal({
   apiKeyInfo?: { key: string; environment: "test" | "live" };
   skipPermissionCheck?: boolean;
   forceStamp?: boolean;
+  // Sustitución de CFDI: relación tipo "04" (Sustitución de los CFDI previos).
+  // El SAT exige que el comprobante nuevo la apunte al UUID del que se cancela
+  // para que la cancelación con motivo "01" sea aceptada. FacturAPI
+  // (RelatedDocumentInput) = { relationship, documents: string[] }, donde
+  // documents es un arreglo plano de UUIDs.
+  relatedDocuments?: Array<{ relationship: string; documents: string[] }>;
+  // Folio explícito (sustituciones). Por defecto se deriva del recibo.
+  folioOverride?: number;
+  // Sustitución (motivo 01): no insertar aún el timbre nuevo porque el viejo
+  // sigue "timbrado" y el índice único (reference_id, estatus=timbrado) lo
+  // rechazaría. El llamador inserta después de liberar el viejo.
+  deferStampInsert?: boolean;
 }) {
 
     // 1) Cargar recibo + empleado + periodo + organización
@@ -620,7 +635,8 @@ async function stampPayrollReceiptInternal({
       use: "CN01",
       payment_form: "99",
       payment_method: "PUE",
-      folio_number: numericFolioFromReceipt(receipt, period, emp),
+      folio_number: folioOverride ?? numericFolioFromReceipt(receipt, period, emp),
+      ...(relatedDocuments?.length ? { related_documents: relatedDocuments } : {}),
       complements: [
         {
           type: "nomina",
@@ -726,25 +742,37 @@ async function stampPayrollReceiptInternal({
       console.warn("No se pudo guardar XML/PDF en storage:", e);
     }
 
-    const { data: stampRow } = await (supabaseAdmin as any).from("cfdi_stamps").insert({
-      organization_id: receipt.organization_id,
-      kind: "nomina",
-      reference_id: receipt.id,
-      facturapi_id: fapiId,
-      uuid_sat: uuid,
-      serie,
-      folio,
-      fecha_timbrado: fecha,
-      xml_path: xmlPath,
-      pdf_path: pdfPath,
-      ambiente: environment,
-      estatus: "timbrado",
-      payload,
-      total,
-      timbrado_por: userId,
-    }).select("id").single();
+    if (deferStampInsert) {
+      return { ok: true, uuid, stampId: undefined, facturapi_id: fapiId, ambiente: environment, deferred: true };
+    }
 
-    return { ok: true, uuid, stampId: stampRow?.id, facturapi_id: fapiId, ambiente: environment };
+    const { data: stampRow, error: stampErr } = await (supabaseAdmin as any)
+      .from("cfdi_stamps")
+      .insert({
+        organization_id: receipt.organization_id,
+        kind: "nomina",
+        reference_id: receipt.id,
+        facturapi_id: fapiId,
+        uuid_sat: uuid,
+        serie,
+        folio,
+        fecha_timbrado: fecha,
+        xml_path: xmlPath,
+        pdf_path: pdfPath,
+        ambiente: environment,
+        estatus: "timbrado",
+        payload,
+        total,
+        timbrado_por: userId,
+      })
+      .select("id")
+      .single();
+    if (stampErr || !stampRow) {
+      const msg = `CFDI timbrado en FacturAPI (${uuid}) pero no se pudo guardar el timbre: ${stampErr?.message ?? "sin id"}`;
+      throw new Error(msg);
+    }
+
+    return { ok: true, uuid, stampId: stampRow.id, facturapi_id: fapiId, ambiente: environment };
 }
 
 export const cancelCfdiStamp = createServerFn({ method: "POST" })
