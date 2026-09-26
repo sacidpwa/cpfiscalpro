@@ -306,10 +306,11 @@ export const runPayroll = createServerFn({ method: "POST" })
       // Siempre se asiste por defecto; solo se descuenta si hay falta o modificador explícito
       const faltas = faltasPorEmp.get(emp.id) ?? 0;
       const otrosDias = otrosDiasPorEmp.get(emp.id) ?? 0;
-      const diasDescontados = Math.round((faltas * fFalta + otrosDias) * 10000) / 10000;
-      const diasPagados = Math.max(0, Math.round((period.dias - diasDescontados) * 10000) / 10000);
+      // 6 decimales: 7/6 es exacto e infinito; con 4 decimales el salario se
+      // perdía ~1 centavo por falta al multiplicar el SD por los días redondeados.
+      const diasDescontados = Math.round((faltas * fFalta + otrosDias) * 1e6) / 1e6;
+      const diasPagados = Math.max(0, Math.round((period.dias - diasDescontados) * 1e6) / 1e6);
       if (diasPagados <= 0) { skipped++; continue; }
-      const importeFalta = Math.round(Number(emp.salario_diario) * diasDescontados * 100) / 100;
 
       // INFONAVIT: cuota mensual prorrateada por periodicidad
       const cuotaMensualInf = Number(emp.infonavit_cuota_mensual ?? 0);
@@ -319,15 +320,19 @@ export const runPayroll = createServerFn({ method: "POST" })
         infonavit = Math.round((cuotaMensualInf / divisor[period.periodicidad as Periodicity]) * 100) / 100;
       }
 
+      // La falta NO es una deducción: el día no se devengó, así que se
+      // reduce la percepción (días pagados) y no se resta del neto.
+      // Registrar la falta como descuento al salario cae fuera de la lista
+      // cerrada del Art. 110 LFT y además distorsiona ISR, subsidio e IMSS,
+      // que se calculan sobre los días realmente devengados.
       const extraDed: { importe: number }[] = [];
       if (infonavit > 0) extraDed.push({ importe: infonavit });
-      if (importeFalta > 0) extraDed.push({ importe: importeFalta });
 
       const result = calcPayroll(
         {
           salarioDiario: Number(emp.salario_diario),
           sdi: Number(emp.sdi),
-          diasPagados: period.dias,
+          diasPagados: diasPagados,
           periodicidad: period.periodicidad as Periodicity,
           deduccionesExtra: extraDed.length ? extraDed : undefined,
         },
@@ -349,7 +354,7 @@ export const runPayroll = createServerFn({ method: "POST" })
           organization_id: data.organizationId,
           payroll_period_id: period.id,
           employee_id: emp.id,
-          dias_pagados: period.dias,
+          dias_pagados: diasPagados,
           sueldo_diario: emp.salario_diario,
           sdi: emp.sdi,
           total_percepciones: result.total_percepciones,
@@ -368,18 +373,17 @@ export const runPayroll = createServerFn({ method: "POST" })
         .single();
       if (re) throw new Error(re.message);
 
+      const descSueldo = diasPagados < period.dias
+        ? `Sueldo (${diasPagados} días devengados de ${period.dias})`
+        : `Sueldo (${period.dias} días)`;
       const lines: Array<{ concepto_clave: string; descripcion: string; tipo: "percepcion" | "deduccion"; importe_gravado: number; importe_exento: number }> = [
-        { concepto_clave: "001", descripcion: `Sueldo (${period.dias} días)`, tipo: "percepcion", importe_gravado: result.total_gravado, importe_exento: 0 },
+        { concepto_clave: "001", descripcion: descSueldo, tipo: "percepcion", importe_gravado: result.total_gravado, importe_exento: 0 },
         { concepto_clave: "002", descripcion: "ISR", tipo: "deduccion", importe_gravado: result.isr, importe_exento: 0 },
       ];
       if (data.incluirImss && result.imss_obrero > 0) {
         lines.push({ concepto_clave: "001", descripcion: "IMSS Obrero", tipo: "deduccion", importe_gravado: result.imss_obrero, importe_exento: 0 });
       }
 
-      if (faltas > 0) {
-        const desc = `Faltas: ${faltas} día${faltas === 1 ? "" : "s"} · ${diasDescontados} día(s) desc.`;
-        lines.push({ concepto_clave: "020", descripcion: desc, tipo: "deduccion", importe_gravado: importeFalta, importe_exento: 0 });
-      }
       if (infonavit > 0) {
         // SAT c_TipoDeduccion 010 = Préstamos provenientes del Fondo Nacional para la Vivienda (Crédito INFONAVIT)
         lines.push({ concepto_clave: "010", descripcion: "Crédito INFONAVIT", tipo: "deduccion", importe_gravado: infonavit, importe_exento: 0 });
@@ -479,30 +483,30 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
       semanal: 7 / 6, catorcenal: 7 / 6, quincenal: 1, mensual: 1,
     };
     const fFalta = factorFalta[period.periodicidad as Periodicity];
-    const diasDescontados = Math.round((faltas * fFalta + otrosDias) * 10000) / 10000;
-    const diasPagados = Math.max(0, Math.round((period.dias - diasDescontados) * 10000) / 10000);
+    // 6 decimales: 7/6 es exacto e infinito; con 4 decimales el salario se
+    // perdía ~1 centavo por falta al multiplicar el SD por los días redondeados.
+    const diasDescontados = Math.round((faltas * fFalta + otrosDias) * 1e6) / 1e6;
+    const diasPagados = Math.max(0, Math.round((period.dias - diasDescontados) * 1e6) / 1e6);
     if (diasPagados <= 0) {
       await supabase.from("payroll_receipt_lines").delete().eq("receipt_id", receipt.id);
       await supabase.from("payroll_receipts").delete().eq("id", receipt.id);
       throw new Error(`${emp.nombre} está sin días pagados (incapacidad total en el periodo). Recibo eliminado.`);
     }
-    const importeFalta = Math.round(Number(emp.salario_diario) * diasDescontados * 100) / 100;
-
     const cuotaMensualInf = Number(emp.infonavit_cuota_mensual ?? 0);
     let infonavit = 0;
     if (cuotaMensualInf > 0) {
       const divisor: Record<Periodicity, number> = { semanal: 4, catorcenal: 2, quincenal: 2, mensual: 1 };
       infonavit = Math.round((cuotaMensualInf / divisor[period.periodicidad as Periodicity]) * 100) / 100;
     }
+    // Ver runPayroll: la falta reduce días devengados, no es deducción.
     const extraDed: { importe: number }[] = [];
     if (infonavit > 0) extraDed.push({ importe: infonavit });
-    if (importeFalta > 0) extraDed.push({ importe: importeFalta });
 
     const result = calcPayroll(
       {
         salarioDiario: Number(emp.salario_diario),
         sdi: Number(emp.sdi),
-        diasPagados: period.dias,
+        diasPagados: diasPagados,
         periodicidad: period.periodicidad as Periodicity,
         deduccionesExtra: extraDed.length ? extraDed : undefined,
       },
@@ -522,7 +526,7 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
     if (delLinesErr) throw new Error(delLinesErr.message);
 
     const { error: upErr } = await supabase.from("payroll_receipts").update({
-      dias_pagados: period.dias,
+      dias_pagados: diasPagados,
       sueldo_diario: emp.salario_diario,
       sdi: emp.sdi,
       total_percepciones: result.total_percepciones,
@@ -539,16 +543,15 @@ export const recalculateReceipt = createServerFn({ method: "POST" })
     }).eq("id", receipt.id);
     if (upErr) throw new Error(upErr.message);
 
+    const descSueldo = diasPagados < period.dias
+      ? `Sueldo (${diasPagados} días devengados de ${period.dias})`
+      : `Sueldo (${period.dias} días)`;
     const lines: Array<{ concepto_clave: string; descripcion: string; tipo: "percepcion" | "deduccion"; importe_gravado: number; importe_exento: number }> = [
-      { concepto_clave: "001", descripcion: `Sueldo (${period.dias} días)`, tipo: "percepcion", importe_gravado: result.total_gravado, importe_exento: 0 },
+      { concepto_clave: "001", descripcion: descSueldo, tipo: "percepcion", importe_gravado: result.total_gravado, importe_exento: 0 },
       { concepto_clave: "002", descripcion: "ISR", tipo: "deduccion", importe_gravado: result.isr, importe_exento: 0 },
     ];
     if (data.incluirImss && result.imss_obrero > 0) {
       lines.push({ concepto_clave: "001", descripcion: "IMSS Obrero", tipo: "deduccion", importe_gravado: result.imss_obrero, importe_exento: 0 });
-    }
-    if (faltas > 0) {
-      const desc = `Faltas: ${faltas} día${faltas === 1 ? "" : "s"} · ${diasDescontados} día(s) desc.`;
-      lines.push({ concepto_clave: "020", descripcion: desc, tipo: "deduccion", importe_gravado: importeFalta, importe_exento: 0 });
     }
     if (infonavit > 0) {
       lines.push({ concepto_clave: "010", descripcion: "Crédito INFONAVIT", tipo: "deduccion", importe_gravado: infonavit, importe_exento: 0 });
