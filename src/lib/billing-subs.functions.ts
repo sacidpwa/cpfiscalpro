@@ -12,6 +12,13 @@ const STATUS = ["pendiente", "generada", "pagada", "vencida", "cancelada"] as co
 const METHODS = ["transferencia", "efectivo", "stripe", "tarjeta", "otro"] as const;
 const STRIPE_SURCHARGE = 0.2;
 
+/** RFCs propios del operador (persona física y moral): nunca se les factura ni cobra */
+const BILLING_EXEMPT_RFCS = new Set(["RUCR840927QH4", "SAC210217BN1"]);
+
+function isBillingExempt(rfc: string | null | undefined): boolean {
+  return !!rfc && BILLING_EXEMPT_RFCS.has(rfc.trim().toUpperCase());
+}
+
 /** Cliente: facturas y estatus de su org */
 export const listMyBilling = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -176,6 +183,12 @@ export const adminGenerateInvoice = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: orgRfc } = await supabaseAdmin
+      .from("organizations")
+      .select("rfc")
+      .eq("id", data.organizationId)
+      .maybeSingle();
+    if (isBillingExempt(orgRfc?.rfc)) throw new Error("Esta organización está exenta de cobro (RFC propio del operador)");
     const { data: plan } = await supabaseAdmin
       .from("subscription_plans")
       .select("*")
@@ -325,10 +338,12 @@ export const adminListPendingInvoices = createServerFn({ method: "GET" })
       const ref = s.reference_id;
       if (!stampsByRef.has(ref)) stampsByRef.set(ref, s);
     }
-    const invoices = (invRes.data ?? []).map((inv: any) => ({
-      ...inv,
-      cfdi_stamp: stampsByRef.get(inv.id) ?? null,
-    }));
+    const invoices = (invRes.data ?? [])
+      .filter((inv: any) => !isBillingExempt(inv.organizations?.rfc))
+      .map((inv: any) => ({
+        ...inv,
+        cfdi_stamp: stampsByRef.get(inv.id) ?? null,
+      }));
     return invoices;
   });
 
@@ -351,6 +366,7 @@ export const adminAutoGenerateInvoices = createServerFn({ method: "POST" })
     let created = 0;
 
     for (const plan of (plans as any[])) {
+      if (isBillingExempt(plan.organizations?.rfc)) continue;
       const planStart = new Date(plan.fecha_inicio);
       let y = planStart.getFullYear();
       let m = planStart.getMonth() + 1;
@@ -434,6 +450,7 @@ export const adminStampSubscriptionInvoice = createServerFn({ method: "POST" })
     if (inv.estatus === "pagada" || inv.estatus === "cancelada") throw new Error("La factura ya está pagada o cancelada");
 
     const org = (inv as any).organizations;
+    if (isBillingExempt(org?.rfc)) throw new Error("Esta organización está exenta de cobro (RFC propio del operador)");
     const periodo = `${inv.ejercicio}/${String(inv.mes).padStart(2, "0")}`;
     const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
     const mesNombre = meses[(inv.mes - 1)] ?? "";
