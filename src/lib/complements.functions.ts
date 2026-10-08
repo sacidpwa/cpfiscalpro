@@ -483,13 +483,13 @@ export const stampPaymentComplement = createServerFn({ method: "POST" })
     }
     const byId = new Map<string, any>(origins.map((o: any) => [o.id, o]));
     const first: any = byId.get(ids[0]);
-    const customer = first.payload?.response?.customer ?? first.payload?.customer;
+    const customer = first.payload?.response?.customer ?? first.payload?.customer ?? first.payload?.request?.customer;
     if (!customer) throw new Error("La factura origen no tiene datos del cliente");
     let xmlFiscalData = await getStoredXmlFiscalData(supabaseAdmin, first.xml_path);
     const originXmlData = new Map<string, Awaited<ReturnType<typeof getStoredXmlFiscalData>>>();
     if (first.xml_path) originXmlData.set(first.id, xmlFiscalData);
     for (const o of origins) {
-      const c = o.payload?.response?.customer ?? o.payload?.customer;
+      const c = o.payload?.response?.customer ?? o.payload?.customer ?? o.payload?.request?.customer;
       if (!c || c.tax_id !== customer.tax_id) {
         throw new Error("Todas las facturas deben ser del mismo cliente (RFC) para un mismo complemento de pago.");
       }

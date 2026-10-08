@@ -315,6 +315,7 @@ export const adminListPendingInvoices = createServerFn({ method: "GET" })
         .select("id, reference_id, estatus, uuid_sat, pdf_path, xml_path, created_at")
         .eq("organization_id", SAC_ORG_ID)
         .eq("kind", "ingreso")
+        .eq("estatus", "timbrado")
         .not("reference_id", "is", null)
         .order("created_at", { ascending: false }),
     ]);
