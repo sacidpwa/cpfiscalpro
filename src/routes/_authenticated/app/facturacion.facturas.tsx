@@ -646,7 +646,7 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
         )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-          <label className="col-span-2 block md:col-span-3">
+          <label className="block sm:col-span-2 md:col-span-3">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Cliente</span>
             <select value={customerId} onChange={(e) => pickCustomer(e.target.value)} required className="w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring">
               <option value="">Selecciona…</option>

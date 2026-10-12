@@ -181,9 +181,9 @@ function ProductForm({ initial, organizationId, onClose, onSave }: { initial: an
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           <Input label="Clave interna" value={f.clave} mono onChange={(v) => setF({ ...f, clave: v })} required />
-          <Input label="Descripción" value={f.descripcion} onChange={(v) => setF({ ...f, descripcion: v })} required className="col-span-2" />
+          <Input label="Descripción" value={f.descripcion} onChange={(v) => setF({ ...f, descripcion: v })} required className="sm:col-span-2" />
           <Select label="Tipo" value={f.tipo} options={[["producto", "Producto"], ["servicio", "Servicio"]]} onChange={(v) => setF({ ...f, tipo: v })} />
-          <Field label="ClaveProdServ SAT" className="col-span-2">
+          <Field label="ClaveProdServ SAT" className="sm:col-span-2">
             <div className="flex gap-1">
               <input
                 value={f.clave_prod_serv}

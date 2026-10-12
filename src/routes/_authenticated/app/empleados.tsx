@@ -568,7 +568,7 @@ function EmpForm({ initial, onClose, onSave }: { initial: any; onClose: () => vo
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           <Input label="Núm." value={f.numero} onChange={(v) => setF({ ...f, numero: v })} required />
-          <Input label="Nombre(s)" value={f.nombre} onChange={(v) => setF({ ...f, nombre: v })} required className="col-span-2"/>
+          <Input label="Nombre(s)" value={f.nombre} onChange={(v) => setF({ ...f, nombre: v })} required className="sm:col-span-2"/>
           <Input label="Apellido paterno" value={f.apellido_paterno} onChange={(v) => setF({ ...f, apellido_paterno: v })} />
           <Input label="Apellido materno" value={f.apellido_materno} onChange={(v) => setF({ ...f, apellido_materno: v })} />
           <Input label="Empresa" value={f.empresa} onChange={(v) => setF({ ...f, empresa: v })} required />
@@ -693,7 +693,7 @@ function ContratoDialog({
             </label>
           )}
 
-          <label className="col-span-2 text-xs">
+          <label className="sm:col-span-2 text-xs">
             Horario de trabajo
             <textarea value={f.horario} onChange={(e) => setF({ ...f, horario: e.target.value })} className="mt-1 block w-full rounded border bg-background px-2 py-1.5 text-sm" rows={2} />
           </label>

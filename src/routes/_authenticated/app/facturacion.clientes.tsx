@@ -273,8 +273,8 @@ function CustomerForm({ initial, onClose, onSave, orgId }: { initial: any; onClo
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           <Input label="RFC" value={f.rfc} mono onChange={(v) => setF({ ...f, rfc: v.toUpperCase() })} required />
-          <Input label="Razón social" value={f.razon_social} onChange={(v) => setF({ ...f, razon_social: v })} required className="col-span-2" />
-          <Input label="Nombre comercial" value={f.nombre_comercial} onChange={(v) => setF({ ...f, nombre_comercial: v })} className="col-span-2" />
+          <Input label="Razón social" value={f.razon_social} onChange={(v) => setF({ ...f, razon_social: v })} required className="sm:col-span-2" />
+          <Input label="Nombre comercial" value={f.nombre_comercial} onChange={(v) => setF({ ...f, nombre_comercial: v })} className="sm:col-span-2" />
           <Select label="Régimen fiscal" value={f.regimen_fiscal} options={REGIMENES} onChange={(v) => setF({ ...f, regimen_fiscal: v })} />
           <Select label="Uso CFDI" value={f.uso_cfdi_default} options={USOS_CFDI} onChange={(v) => setF({ ...f, uso_cfdi_default: v })} />
           <Input label="CP fiscal" value={f.codigo_postal} mono onChange={(v) => setF({ ...f, codigo_postal: v })} required />
@@ -283,13 +283,13 @@ function CustomerForm({ initial, onClose, onSave, orgId }: { initial: any; onClo
           <Select label="Método de pago" value={f.metodo_pago_default} options={[["PUE", "PUE - Pago en una exhibición"], ["PPD", "PPD - Pago en parcialidades"]]} onChange={(v) => setF({ ...f, metodo_pago_default: v })} />
           <Input label="Días de crédito" type="number" value={f.dias_credito} mono onChange={(v) => setF({ ...f, dias_credito: Number(v) || 0 })} />
           <Input label="Moneda" value={f.moneda} mono onChange={(v) => setF({ ...f, moneda: v.toUpperCase() })} />
-          <Input label="Calle" value={f.calle} onChange={(v) => setF({ ...f, calle: v })} className="col-span-2" />
+          <Input label="Calle" value={f.calle} onChange={(v) => setF({ ...f, calle: v })} className="sm:col-span-2" />
           <Input label="Núm. ext" value={f.num_exterior} onChange={(v) => setF({ ...f, num_exterior: v })} />
           <Input label="Núm. int" value={f.num_interior} onChange={(v) => setF({ ...f, num_interior: v })} />
           <Input label="Colonia" value={f.colonia} onChange={(v) => setF({ ...f, colonia: v })} />
           <Input label="Municipio" value={f.municipio} onChange={(v) => setF({ ...f, municipio: v })} />
           <Input label="Estado" value={f.estado} onChange={(v) => setF({ ...f, estado: v })} />
-          <Field label="" className="col-span-3">
+          <Field label="" className="sm:col-span-2 md:col-span-3">
             <div className="mt-2 rounded-md border border-dashed border-primary/30 bg-primary/5 p-3">
               <label className="flex items-center gap-2 text-sm font-medium">
                 <input
@@ -320,7 +320,7 @@ function CustomerForm({ initial, onClose, onSave, orgId }: { initial: any; onClo
               )}
             </div>
           </Field>
-          <Field label="Notas" className="col-span-3">
+          <Field label="Notas" className="sm:col-span-2 md:col-span-3">
             <textarea value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })} rows={2} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring" />
           </Field>
         </div>
