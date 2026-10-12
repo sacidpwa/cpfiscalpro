@@ -173,13 +173,13 @@ function ProductForm({ initial, organizationId, onClose, onSave }: { initial: an
       <form
         onSubmit={(e) => { e.preventDefault(); onSave(f); }}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border bg-card p-6"
+        className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border bg-card p-4 sm:p-6"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{initial ? "Editar" : "Nuevo"} producto/servicio</h2>
           <button type="button" onClick={onClose} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           <Input label="Clave interna" value={f.clave} mono onChange={(v) => setF({ ...f, clave: v })} required />
           <Input label="Descripción" value={f.descripcion} onChange={(v) => setF({ ...f, descripcion: v })} required className="col-span-2" />
           <Select label="Tipo" value={f.tipo} options={[["producto", "Producto"], ["servicio", "Servicio"]]} onChange={(v) => setF({ ...f, tipo: v })} />

@@ -265,13 +265,13 @@ function CustomerForm({ initial, onClose, onSave, orgId }: { initial: any; onClo
       <form
         onSubmit={(e) => { e.preventDefault(); onSave(f); }}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border bg-card p-6"
+        className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border bg-card p-4 sm:p-6"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{initial ? "Editar" : "Nuevo"} cliente</h2>
           <button type="button" onClick={onClose} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           <Input label="RFC" value={f.rfc} mono onChange={(v) => setF({ ...f, rfc: v.toUpperCase() })} required />
           <Input label="Razón social" value={f.razon_social} onChange={(v) => setF({ ...f, razon_social: v })} required className="col-span-2" />
           <Input label="Nombre comercial" value={f.nombre_comercial} onChange={(v) => setF({ ...f, nombre_comercial: v })} className="col-span-2" />
@@ -301,7 +301,7 @@ function CustomerForm({ initial, onClose, onSave, orgId }: { initial: any; onClo
                 Facturación mensual activa
               </label>
               {f.facturacion_mensual_activo && (
-                <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1 block text-xs font-medium text-muted-foreground">Producto/servicio</span>
                     <select

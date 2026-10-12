@@ -351,7 +351,7 @@ function Empleados() {
       )}
       {dropData && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setDropData(null)}>
-          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg border bg-card p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-4 text-lg font-semibold">Empleados detectados ({dropData.length})</h2>
             <div className="space-y-3">
               {dropData.map((emp, i) => (
@@ -560,13 +560,13 @@ function EmpForm({ initial, onClose, onSave }: { initial: any; onClose: () => vo
       <form
         onSubmit={(e) => { e.preventDefault(); onSave(f); }}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-lg border bg-card p-6"
+        className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-lg border bg-card p-4 sm:p-6"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{initial ? "Editar" : "Nuevo"} empleado</h2>
           <button type="button" onClick={onClose} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4"/></button>
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           <Input label="Núm." value={f.numero} onChange={(v) => setF({ ...f, numero: v })} required />
           <Input label="Nombre(s)" value={f.nombre} onChange={(v) => setF({ ...f, nombre: v })} required className="col-span-2"/>
           <Input label="Apellido paterno" value={f.apellido_paterno} onChange={(v) => setF({ ...f, apellido_paterno: v })} />

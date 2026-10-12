@@ -735,7 +735,7 @@ function CartaPorteForm({ organizationId, onClose }: { organizationId: string; o
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-lg border bg-card p-6">
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-lg border bg-card p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Nueva carta porte 3.0</h2>
           <button type="button" onClick={onClose} className="rounded p-1 hover:bg-secondary"><X className="h-4 w-4" /></button>
@@ -749,7 +749,7 @@ function CartaPorteForm({ organizationId, onClose }: { organizationId: string; o
 
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">Tipo y datos generales</h3>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <Field label="Tipo de CFDI">
               <select value={cfdiType} onChange={(e) => setCfdiType(e.target.value as any)} className="input">
                 <option value="I">Ingreso (cobro de flete)</option>
@@ -819,7 +819,7 @@ function CartaPorteForm({ organizationId, onClose }: { organizationId: string; o
                   <button type="button" onClick={() => setUbicaciones(ubicaciones.filter((_, idx) => idx !== i))} className="rounded p-1 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></button>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
                 <Field label="Tipo">
                   <select value={u.tipo_ubicacion} onChange={(e) => upd(ubicaciones, setUbicaciones, i, { tipo_ubicacion: e.target.value })} className="input">
                     <option value="Origen">Origen</option>
@@ -858,7 +858,7 @@ function CartaPorteForm({ organizationId, onClose }: { organizationId: string; o
                   <button type="button" onClick={() => setMercancias(mercancias.filter((_, idx) => idx !== i))} className="rounded p-1 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></button>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
                 <Field label="Clave ProdServCP"><input required value={m.bienes_transp} onChange={(e) => upd(mercancias, setMercancias, i, { bienes_transp: e.target.value })} className="input font-mono" /></Field>
                 <Field label="Descripción"><input required value={m.descripcion} onChange={(e) => upd(mercancias, setMercancias, i, { descripcion: e.target.value })} className="input" /></Field>
                 <Field label="Cantidad"><input type="number" min={0} step="0.01" value={m.cantidad} onChange={(e) => upd(mercancias, setMercancias, i, { cantidad: Number(e.target.value) })} className="input" /></Field>

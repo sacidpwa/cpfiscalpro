@@ -631,7 +631,7 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-lg border bg-card p-6"
+        className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-lg border bg-card p-4 sm:p-6"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Nueva factura de ingreso</h2>
@@ -645,7 +645,7 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           <label className="col-span-2 block md:col-span-3">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Cliente</span>
             <select value={customerId} onChange={(e) => pickCustomer(e.target.value)} required className="w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring">
@@ -747,7 +747,7 @@ export function InvoiceForm({ organizationId, onClose, onSaved, prefillCustomerI
                       {isNewRow && (
                         <tr key={`${idx}-new`}>
                           <td colSpan={6} className="bg-secondary/20 px-2 py-2">
-                            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
                               <label className="block">
                                 <span className="text-[10px] font-medium text-muted-foreground">Clave SAT</span>
                                 <SatProductAutocomplete
