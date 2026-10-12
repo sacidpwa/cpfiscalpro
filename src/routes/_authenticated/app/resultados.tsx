@@ -313,9 +313,11 @@ function Resultados() {
                     INGRESOS
                   </td>
                 </tr>
-                {er.ingresos.map((c: any, i: number) => (
-                  <tr key={i} className="hover:bg-secondary/30">
-                    <td className="px-3 pl-6 font-mono text-xs">
+                {er.ingresos.map((c: any, i: number) => {
+                  const esMixta = (er.mixedCodes ?? []).includes(c.codigo);
+                  return (
+                  <tr key={i} className="hover:bg-secondary/30" style={esMixta ? { background: "#f5f3ff" } : undefined}>
+                    <td className="px-3 pl-6 font-mono text-xs" style={esMixta ? { color: "#7c3aed" } : undefined}>
                       {c.codigo.replace(/^0+/, "")} — {c.nombre}
                     </td>
                     <td className="px-3 text-right font-mono font-medium">
@@ -331,7 +333,8 @@ function Resultados() {
                       {pctFmt(c.ytdPct)}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {/* Honorarios Profesionales (asimilados) — informativo, no suma al total */}
                 {splitOn && (
                   <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>
@@ -376,9 +379,11 @@ function Resultados() {
                     COSTOS
                   </td>
                 </tr>
-                {er.costos.map((c: any, i: number) => (
-                  <tr key={i} className="hover:bg-secondary/30">
-                    <td className="px-3 pl-6 font-mono text-xs">
+                {er.costos.map((c: any, i: number) => {
+                  const esMixta = (er.mixedCodes ?? []).includes(c.codigo);
+                  return (
+                  <tr key={i} className="hover:bg-secondary/30" style={esMixta ? { background: "#f5f3ff" } : undefined}>
+                    <td className="px-3 pl-6 font-mono text-xs" style={esMixta ? { color: "#7c3aed" } : undefined}>
                       {c.codigo.replace(/^0+/, "")} — {c.nombre}
                     </td>
                     <td className="px-3 text-right font-mono font-medium">
@@ -394,7 +399,8 @@ function Resultados() {
                       {pctFmt(c.ytdPct)}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 <tr className="font-bold" style={{ borderTop: "2px solid #dc2626" }}>
                   <td className="px-3 py-2">Total Costos</td>
                   <td className="px-3 text-right font-mono" style={{ color: "#dc2626" }}>
@@ -485,8 +491,11 @@ function Resultados() {
                           hasMov &&
                           items.map((c: any, ci: number) =>
                             Math.abs(c.perVal) > 0.01 || Math.abs(c.ytdVal) > 0.01 ? (
-                              <tr key={ci}>
-                                <td className="px-3 pl-8 font-mono text-xs">
+                              (() => {
+                                const esMixta = (er.mixedCodes ?? []).includes(c.codigo);
+                                return (
+                              <tr key={ci} style={esMixta ? { background: "#f5f3ff" } : undefined}>
+                                <td className="px-3 pl-8 font-mono text-xs" style={esMixta ? { color: "#7c3aed" } : undefined}>
                                   {c.codigo.replace(/^0+/, "")} — {c.nombre}
                                 </td>
                                 <td className="px-3 text-right font-mono font-medium">
@@ -502,6 +511,8 @@ function Resultados() {
                                   {pctFmt(c.ytdPct)}
                                 </td>
                               </tr>
+                                );
+                              })()
                             ) : null,
                           )}
                         <tr
