@@ -551,6 +551,7 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
         ejercicio: z.number(),
         desdeMes: z.number(),
         hastaMes: z.number(),
+        includeLaross: z.boolean().default(false),
       })
       .parse(i),
   )
@@ -579,6 +580,94 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
 
     function signed(s: any) {
       return s.naturaleza === "deudora" ? -s.saldo : s.saldo;
+    }
+
+    // ==== ESCENARIO HELIX / LAROSS ====
+    // Cuentas "con distintivo": están mezcladas entre HELIX y HELIX-LAROSS y se
+    // reparten proporcional al headcount (campo employees.empresa).
+    const MIXED_ACCTS = new Set([
+      "610000100000000000002", // Sueldos y Salarios
+      "610000200000000000002", // Asimilados a Salarios
+      "610001700000000000002", // Cuota IMSS
+      "620001600000000000002", // Cuota IMSS (gasto patronal, admin)
+      "610002000000000000002", // Impuesto sobre Nómina
+      "610003000000000000002", // Honorarios
+      "610003100000000000002", // Honorarios
+      "620002900000000000002", // Honorarios (admin)
+      "620003000000000000002", // Honorarios (admin)
+      "420000200000000000002", // Devoluciones y descuentos
+    ]);
+
+    // hRatio = parte de HELIX (se aplica solo cuando NO incluimos LAROSS, pero se
+    // calcula siempre para poder mostrar la explicación en los tooltips de ayuda).
+    let hRatio = 1;
+    let hCount = 0;
+    let lCount = 0;
+    const periodoFin = new Date(data.ejercicio, Math.min(data.hastaMes, 12), 0)
+      .toISOString()
+      .slice(0, 10);
+    const { data: empCount } = await context.supabase
+      .from("employees")
+      .select("empresa")
+      .eq("organization_id", data.organizationId)
+      .eq("estatus", "activo")
+      .lte("fecha_alta", periodoFin);
+    for (const e of empCount ?? []) {
+      const emp = ((e as any).empresa || "").trim();
+      if (emp === "HELIX") hCount++;
+      else lCount++; // HELIX-LAROSS y cualquier otro
+    }
+    const totalEmp = hCount + lCount;
+    hRatio = totalEmp > 0 ? hCount / totalEmp : 1;
+    // solo se usa para ajustar montos cuando NO incluimos LAROSS
+    const applyRatio = !data.includeLaross;
+    function ratioFor(codigo: string): number {
+      return applyRatio && MIXED_ACCTS.has(codigo) ? hRatio : 1;
+    }
+
+    // Ingresos OFIC. IMPORTACIONES (cuenta de activo 1150-003) — se mide desde journal_lines.
+    // Solo se incluye como ingreso cuando includeLaross=true; si no, no aparece.
+    let ingresosClientePer = 0;
+    let ingresosClienteYTD = 0;
+    const { data: clienteAcct } = await context.supabase
+      .from("accounts")
+      .select("id")
+      .eq("organization_id", data.organizationId)
+      .eq("codigo", "115000100300000000003")
+      .maybeSingle();
+    if (clienteAcct && data.includeLaross) {
+      const fytdDesde = `${data.ejercicio}-01-01`;
+      const fhasta = new Date(data.ejercicio, Math.min(data.hastaMes, 12), 0)
+        .toISOString()
+        .slice(0, 10);
+      const fdesde =
+        data.desdeMes > 1
+          ? `${data.ejercicio}-${String(data.desdeMes).padStart(2, "0")}-01`
+          : fytdDesde;
+      const { data: cliYTD } = await context.supabase
+        .from("journal_lines")
+        .select("cargo, entry:journal_entries!inner(fecha, estatus, organization_id)")
+        .eq("entry.organization_id", data.organizationId)
+        .neq("entry.estatus", "cancelada")
+        .gte("entry.fecha", fytdDesde)
+        .lte("entry.fecha", fhasta)
+        .eq("account_id", clienteAcct.id);
+      ingresosClienteYTD = (cliYTD ?? []).reduce((s: number, l: any) => s + Number(l.cargo ?? 0), 0);
+      if (data.desdeMes > 1) {
+        const fAnt = new Date(data.ejercicio, data.desdeMes - 1, 0).toISOString().slice(0, 10);
+        const { data: cliAnt } = await context.supabase
+          .from("journal_lines")
+          .select("cargo, entry:journal_entries!inner(fecha, estatus, organization_id)")
+          .eq("entry.organization_id", data.organizationId)
+          .neq("entry.estatus", "cancelada")
+          .gte("entry.fecha", fytdDesde)
+          .lte("entry.fecha", fAnt)
+          .eq("account_id", clienteAcct.id);
+        const ant = (cliAnt ?? []).reduce((s: number, l: any) => s + Number(l.cargo ?? 0), 0);
+        ingresosClientePer = ingresosClienteYTD - ant;
+      } else {
+        ingresosClientePer = ingresosClienteYTD;
+      }
     }
 
     // Gastos de operación sub-groups (6xxx)
@@ -663,8 +752,8 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       if (s.acumulativa) continue;
       const d = s.codigo.replace(/^0+/, "")[0];
       if (d !== "4" && d !== "5" && d !== "6" && d !== "7") continue;
-      const ytd = signed(s);
-      const per = ytd - (antMap[s.codigo] || 0);
+      const ytd = signed(s) * ratioFor(s.codigo);
+      const per = (ytd) - (antMap[s.codigo] || 0) * ratioFor(s.codigo);
       if (Math.abs(ytd) < 0.01 && Math.abs(per) < 0.01 && d !== "6") continue;
 
       if (d === "7") {
@@ -723,6 +812,20 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       return arr.reduce((a: number, c: any) => a + c[f], 0);
     }
 
+    // Si incluimos LAROSS, el ingreso de importaciones entra como renglón real de INGRESOS
+    if (data.includeLaross && (Math.abs(ingresosClientePer) > 0.01 || Math.abs(ingresosClienteYTD) > 0.01)) {
+      cats["4"].push({
+        codigo: "115000100300000000003",
+        nombre: "INGRESOS OFIC. IMPORTACIONES",
+        perVal: ingresosClientePer,
+        ytdVal: ingresosClienteYTD,
+        perPct: 0,
+        ytdPct: 0,
+      });
+      ventasPer += ingresosClientePer;
+      ventasYTD += ingresosClienteYTD;
+    }
+
     addPct(cats["4"]);
     addPct(cats["5"]);
 
@@ -768,45 +871,27 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
     const uNetaPer = uOperPer + tOIPer - tOGPer;
     const uNetaYTD = uOperYTD + tOIYTD - tOGYTD;
 
-    // Ingresos por cliente (OFIC. IMPORTACIONES) — desde journal_lines, solo informativo
-    let ingresosClientePer = 0;
-    const { data: clienteAcct } = await context.supabase
-      .from("accounts")
-      .select("id")
-      .eq("organization_id", data.organizationId)
-      .eq("codigo", "115000100300000000003")
-      .maybeSingle();
-    if (clienteAcct) {
-      const fdesde = `${data.ejercicio}-${String(data.desdeMes).padStart(2, "0")}-01`;
-      const fhasta = new Date(data.ejercicio, data.hastaMes, 0).toISOString().slice(0, 10);
-      const { data: cliLines } = await context.supabase
-        .from("journal_lines")
-        .select("cargo, entry:journal_entries!inner(fecha, estatus, organization_id)")
-        .eq("entry.organization_id", data.organizationId)
-        .neq("entry.estatus", "cancelada")
-        .gte("entry.fecha", fdesde)
-        .lte("entry.fecha", fhasta)
-        .eq("account_id", clienteAcct.id);
-      ingresosClientePer = (cliLines ?? []).reduce(
-        (s: number, l: any) => s + Number(l.cargo ?? 0),
-        0,
-      );
-    }
-
     // Honorarios Profesionales (asimilados a salarios) — informativo para mostrar en INGRESOS
     let asimiladosPer = 0;
     let asimiladosYTD = 0;
     for (const s of saldosHasta) {
       if (s.acumulativa) continue;
       if (s.codigo !== "610000200000000000002") continue;
-      const ytd = s.naturaleza === "deudora" ? -s.saldo : s.saldo;
-      const per = ytd - (antMap[s.codigo] || 0);
+      const r = ratioFor(s.codigo);
+      const ytd = (s.naturaleza === "deudora" ? -s.saldo : s.saldo) * r;
+      const per = ytd - (antMap[s.codigo] || 0) * r;
       asimiladosYTD = Math.abs(ytd);
       asimiladosPer = Math.abs(per);
       break;
     }
 
     return {
+      // metadatos para los tooltips de ayuda
+      includeLaross: data.includeLaross,
+      hRatio,
+      hCount,
+      lCount,
+      mixedCodes: Array.from(MIXED_ACCTS),
       ingresos: cats["4"],
       costos: cats["5"],
       gastosOp,

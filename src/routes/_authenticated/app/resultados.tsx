@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, Fragment } from "react";
+import { createContext, useContext, useState, Fragment, type ReactNode } from "react";
 import { toast } from "sonner";
 import { getEstadoResultados, getHelixLarossSplit } from "@/lib/accounting.functions";
 import { useRequireOrg } from "@/lib/use-current-org";
 import { PageHeader, EmptyState } from "@/components/app-ui";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { LineChart, ChevronDown, ChevronRight, FileDown } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/resultados")({
@@ -33,6 +34,78 @@ function fmt(n: number) {
 function pctFmt(n: number) {
   return n.toFixed(2) + "%";
 }
+
+// --- Toggle de ayuda: al activarlo, cada monto explica de dónde sale ---
+const HelpCtx = createContext(false);
+
+function ratioExp(er: any, codigo: string): string {
+  const esMixta = (er.mixedCodes ?? []).includes(codigo);
+  if (!esMixta) return "Cuenta normal, no se le aplica proporción.";
+  const total = er.hCount + er.lCount;
+  if (er.includeLaross) {
+    return `Cuenta con distintivo HELIX-LAROSS. Al incluir LAROSS se toma al 100% (${total} empleados).`;
+  }
+  return `Cuenta con distintivo HELIX-LAROSS. Se aplica proporción de HELIX = ${er.hCount}/${total} = ${pctFmt(er.hRatio * 100)}, porque solo se carga la parte de HELIX.`;
+}
+
+function notaCuenta(er: any, c: any): string {
+  const esMixta = (er.mixedCodes ?? []).includes(c.codigo);
+  const codigo = String(c.codigo).replace(/^0+/, "");
+  return [
+    `Cuenta ${codigo} — ${c.nombre}`,
+    `Periodo: $${fmt(c.perVal)}   Acumulado: $${fmt(c.ytdVal)}`,
+    "",
+    ratioExp(er, c.codigo),
+  ].join("\n");
+}
+
+function notaFormula(titulo: string, partes: string[]): string {
+  return [titulo, "", ...partes].join("\n");
+}
+
+function notaTotal(er: any, titulo: string, formula: string[]): string {
+  const extra = er.includeLaross
+    ? "\n\nIncluye LAROSS: montos al 100% + ingreso de importaciones."
+    : "\n\nSolo HELIX: cuentas con distintivo × " +
+      pctFmt(er.hRatio * 100) +
+      ` (${er.hCount} de ${er.hCount + er.lCount} empleados).`;
+  return [titulo, "", ...formula, extra].join("\n");
+}
+
+// Envuelve un monto; si la ayuda está activa, muestra la nota al hacer hover.
+// help=false (default) renderiza el monto tal cual, sin envoltura.
+function Amt({
+  nota,
+  help,
+  children,
+  className = "",
+  style,
+}: {
+  nota: string;
+  help?: boolean;
+  children: ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  if (!help) return <span className={className} style={style}>{children}</span>;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={`${className} cursor-help underline decoration-dotted decoration-border underline-offset-4 hover:decoration-foreground`}
+            style={style}
+          >
+            {children}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs whitespace-pre-line text-left font-sans">
+          {nota}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 function HLRow({ label, h, l }: { label: string; h: number; l: number }) {
   return (
     <tr>
@@ -56,6 +129,7 @@ function Resultados() {
   const [hasta, setHasta] = useState(mesAct);
   const [detalle, setDetalle] = useState(true);
   const [splitOn, setSplitOn] = useState(false);
+  const [helpMode, setHelpMode] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const splitFn = useServerFn(getHelixLarossSplit);
   const { data: splitData } = useQuery({
@@ -66,9 +140,17 @@ function Resultados() {
   });
 
   const { data: er, isLoading } = useQuery({
-    queryKey: ["er", org.id, ejercicio, desde, hasta],
+    queryKey: ["er", org.id, ejercicio, desde, hasta, splitOn],
     queryFn: () =>
-      fn({ data: { organizationId: org.id, ejercicio, desdeMes: desde, hastaMes: hasta } }),
+      fn({
+        data: {
+          organizationId: org.id,
+          ejercicio,
+          desdeMes: desde,
+          hastaMes: hasta,
+          includeLaross: splitOn,
+        },
+      }),
   });
 
   function toggle(key: string) {
@@ -120,6 +202,18 @@ function Resultados() {
                   className="h-3.5 w-3.5"
                 />
                 HELIX-LAROSS
+              </label>
+              <label
+                className="flex items-center gap-1.5 text-xs cursor-pointer select-none"
+                title="Activa para ver, al pasar el mouse sobre cada monto, de dónde sale"
+              >
+                <input
+                  type="checkbox"
+                  checked={helpMode}
+                  onChange={(e) => setHelpMode(e.target.checked)}
+                  className="h-3.5 w-3.5"
+                />
+                ¿Cómo se calcula?
               </label>
               <button
                 onClick={downloadPdf}
@@ -224,38 +318,20 @@ function Resultados() {
                     <td className="px-3 pl-6 font-mono text-xs">
                       {c.codigo.replace(/^0+/, "")} — {c.nombre}
                     </td>
-                    <td className="px-3 text-right font-mono font-medium">${fmt(c.perVal)}</td>
+                    <td className="px-3 text-right font-mono font-medium">
+                      <Amt nota={notaCuenta(er, c)} help={helpMode}>${fmt(c.perVal)}</Amt>
+                    </td>
                     <td className="px-3 text-right font-mono text-muted-foreground">
                       {pctFmt(c.perPct)}
                     </td>
-                    <td className="px-3 text-right font-mono font-medium">${fmt(c.ytdVal)}</td>
+                    <td className="px-3 text-right font-mono font-medium">
+                      <Amt nota={notaCuenta(er, c)} help={helpMode}>${fmt(c.ytdVal)}</Amt>
+                    </td>
                     <td className="px-3 text-right font-mono text-muted-foreground">
                       {pctFmt(c.ytdPct)}
                     </td>
                   </tr>
                 ))}
-                {/* Ingreso por cliente (informativo, no suma al total) — solo con toggle HELIX-LAROSS */}
-                {splitOn && (
-                  <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>
-                    <td className="px-3 pl-6 font-mono text-xs" style={{ color: "#15803d" }}>
-                      1150-003 — INGRESOS OFIC. IMPORTACIONES (info)
-                    </td>
-                    <td
-                      className="px-3 text-right font-mono font-medium"
-                      style={{ color: "#15803d" }}
-                    >
-                      ${fmt(er.ingresosClientePer)}
-                    </td>
-                    <td className="px-3 text-right font-mono text-muted-foreground">—</td>
-                    <td
-                      className="px-3 text-right font-mono font-medium"
-                      style={{ color: "#15803d" }}
-                    >
-                      ${fmt(er.ingresosClientePer)}
-                    </td>
-                    <td className="px-3 text-right font-mono text-muted-foreground">—</td>
-                  </tr>
-                )}
                 {/* Honorarios Profesionales (asimilados) — informativo, no suma al total */}
                 {splitOn && (
                   <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>
@@ -281,11 +357,11 @@ function Resultados() {
                 <tr className="font-bold" style={{ borderTop: "2px solid #2563eb" }}>
                   <td className="px-3 py-2">Total Ingresos</td>
                   <td className="px-3 text-right font-mono" style={{ color: "#16a34a" }}>
-                    ${fmt(er.totalIngresosPer)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Total Ingresos", ["Suma de todas las cuentas de ingresos (grupo 4) + importaciones si aplica."])}>${fmt(er.totalIngresosPer)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">{pctFmt(100)}</td>
                   <td className="px-3 text-right font-mono" style={{ color: "#16a34a" }}>
-                    ${fmt(er.totalIngresosYTD)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Total Ingresos (acumulado)", ["Suma de todas las cuentas de ingresos (grupo 4) + importaciones si aplica."])}>${fmt(er.totalIngresosYTD)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">{pctFmt(100)}</td>
                 </tr>
@@ -305,11 +381,15 @@ function Resultados() {
                     <td className="px-3 pl-6 font-mono text-xs">
                       {c.codigo.replace(/^0+/, "")} — {c.nombre}
                     </td>
-                    <td className="px-3 text-right font-mono font-medium">${fmt(c.perVal)}</td>
+                    <td className="px-3 text-right font-mono font-medium">
+                      <Amt nota={notaCuenta(er, c)} help={helpMode}>${fmt(c.perVal)}</Amt>
+                    </td>
                     <td className="px-3 text-right font-mono text-muted-foreground">
                       {pctFmt(c.perPct)}
                     </td>
-                    <td className="px-3 text-right font-mono font-medium">${fmt(c.ytdVal)}</td>
+                    <td className="px-3 text-right font-mono font-medium">
+                      <Amt nota={notaCuenta(er, c)} help={helpMode}>${fmt(c.ytdVal)}</Amt>
+                    </td>
                     <td className="px-3 text-right font-mono text-muted-foreground">
                       {pctFmt(c.ytdPct)}
                     </td>
@@ -318,13 +398,13 @@ function Resultados() {
                 <tr className="font-bold" style={{ borderTop: "2px solid #dc2626" }}>
                   <td className="px-3 py-2">Total Costos</td>
                   <td className="px-3 text-right font-mono" style={{ color: "#dc2626" }}>
-                    ${fmt(er.totalCostosPer)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Total Costos", ["Suma de todas las cuentas de costos (grupo 5)."])}>${fmt(er.totalCostosPer)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.totalCostosPer / er.ventasPer) * 100)}
                   </td>
                   <td className="px-3 text-right font-mono" style={{ color: "#dc2626" }}>
-                    ${fmt(er.totalCostosYTD)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Total Costos (acumulado)", ["Suma de todas las cuentas de costos (grupo 5)."])}>${fmt(er.totalCostosYTD)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.totalCostosYTD / er.ventasYTD) * 100)}
@@ -348,7 +428,7 @@ function Resultados() {
                       color: er.utilidadBrutaPer >= 0 ? "inherit" : "#dc2626",
                     }}
                   >
-                    ${fmt(er.utilidadBrutaPer)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Utilidad Bruta (periodo)", ["Total Ingresos − Total Costos."])}>${fmt(er.utilidadBrutaPer)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.utilidadBrutaPer / er.ventasPer) * 100)}
@@ -360,7 +440,7 @@ function Resultados() {
                       color: er.utilidadBrutaYTD >= 0 ? "inherit" : "#dc2626",
                     }}
                   >
-                    ${fmt(er.utilidadBrutaYTD)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Utilidad Bruta (acumulado)", ["Total Ingresos − Total Costos."])}>${fmt(er.utilidadBrutaYTD)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.utilidadBrutaYTD / er.ventasYTD) * 100)}
@@ -410,13 +490,13 @@ function Resultados() {
                                   {c.codigo.replace(/^0+/, "")} — {c.nombre}
                                 </td>
                                 <td className="px-3 text-right font-mono font-medium">
-                                  ${fmt(c.perVal)}
+                                  <Amt nota={notaCuenta(er, c)} help={helpMode}>${fmt(c.perVal)}</Amt>
                                 </td>
                                 <td className="px-3 text-right font-mono text-muted-foreground">
                                   {pctFmt(c.perPct)}
                                 </td>
                                 <td className="px-3 text-right font-mono font-medium">
-                                  ${fmt(c.ytdVal)}
+                                  <Amt nota={notaCuenta(er, c)} help={helpMode}>${fmt(c.ytdVal)}</Amt>
                                 </td>
                                 <td className="px-3 text-right font-mono text-muted-foreground">
                                   {pctFmt(c.ytdPct)}
@@ -449,13 +529,13 @@ function Resultados() {
                 <tr className="font-bold" style={{ borderTop: "2px solid #d97706" }}>
                   <td className="px-3 py-2">Total Gastos de Operación</td>
                   <td className="px-3 text-right font-mono" style={{ color: "#d97706" }}>
-                    ${fmt(er.totalGastosPer)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Total Gastos de Operación", ["Suma de todos los gastos de operación (grupo 6)."])}>${fmt(er.totalGastosPer)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.totalGastosPer / er.ventasPer) * 100)}
                   </td>
                   <td className="px-3 text-right font-mono" style={{ color: "#d97706" }}>
-                    ${fmt(er.totalGastosYTD)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Total Gastos de Operación (acumulado)", ["Suma de todos los gastos de operación (grupo 6)."])}>${fmt(er.totalGastosYTD)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.totalGastosYTD / er.ventasYTD) * 100)}
@@ -548,7 +628,7 @@ function Resultados() {
                       color: er.utilidadOperacionPer >= 0 ? "inherit" : "#dc2626",
                     }}
                   >
-                    ${fmt(er.utilidadOperacionPer)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Utilidad de Operación (periodo)", ["Utilidad Bruta − Total Gastos de Operación."])}>${fmt(er.utilidadOperacionPer)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.utilidadOperacionPer / er.ventasPer) * 100)}
@@ -560,7 +640,7 @@ function Resultados() {
                       color: er.utilidadOperacionYTD >= 0 ? "inherit" : "#dc2626",
                     }}
                   >
-                    ${fmt(er.utilidadOperacionYTD)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Utilidad de Operación (acumulado)", ["Utilidad Bruta − Total Gastos de Operación."])}>${fmt(er.utilidadOperacionYTD)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.utilidadOperacionYTD / er.ventasYTD) * 100)}
@@ -646,13 +726,13 @@ function Resultados() {
                 <tr className="font-bold" style={{ borderTop: "1px solid #059669" }}>
                   <td className="px-3 py-2">Total Otros Ingresos</td>
                   <td className="px-3 text-right font-mono" style={{ color: "#059669" }}>
-                    ${fmt(er.totalOtrosIngresosPer)}
+                    <Amt help={helpMode} nota={notaFormula("Total Otros Ingresos (periodo)", ["Suma de productos financieros y otros productos."])}>${fmt(er.totalOtrosIngresosPer)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.totalOtrosIngresosPer / er.ventasPer) * 100)}
                   </td>
                   <td className="px-3 text-right font-mono" style={{ color: "#059669" }}>
-                    ${fmt(er.totalOtrosIngresosYTD)}
+                    <Amt help={helpMode} nota={notaFormula("Total Otros Ingresos (acumulado)", ["Suma de productos financieros y otros productos."])}>${fmt(er.totalOtrosIngresosYTD)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.totalOtrosIngresosYTD / er.ventasYTD) * 100)}
@@ -661,13 +741,13 @@ function Resultados() {
                 <tr className="font-bold" style={{ borderTop: "1px solid #9333ea" }}>
                   <td className="px-3 py-2">Total Otros Gastos</td>
                   <td className="px-3 text-right font-mono" style={{ color: "#9333ea" }}>
-                    ${fmt(er.totalOtrosGastosPer)}
+                    <Amt help={helpMode} nota={notaFormula("Total Otros Gastos (periodo)", ["Suma de gastos financieros y otros gastos."])}>${fmt(er.totalOtrosGastosPer)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.totalOtrosGastosPer / er.ventasPer) * 100)}
                   </td>
                   <td className="px-3 text-right font-mono" style={{ color: "#9333ea" }}>
-                    ${fmt(er.totalOtrosGastosYTD)}
+                    <Amt help={helpMode} nota={notaFormula("Total Otros Gastos (acumulado)", ["Suma de gastos financieros y otros gastos."])}>${fmt(er.totalOtrosGastosYTD)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.totalOtrosGastosYTD / er.ventasYTD) * 100)}
@@ -691,7 +771,7 @@ function Resultados() {
                       color: er.utilidadNetaPer >= 0 ? "#16a34a" : "#dc2626",
                     }}
                   >
-                    ${fmt(er.utilidadNetaPer)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Utilidad Neta (periodo)", ["Utilidad de Operación + Otros Ingresos − Otros Gastos."])}>${fmt(er.utilidadNetaPer)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.utilidadNetaPer / er.ventasPer) * 100)}
@@ -703,7 +783,7 @@ function Resultados() {
                       color: er.utilidadNetaYTD >= 0 ? "#16a34a" : "#dc2626",
                     }}
                   >
-                    ${fmt(er.utilidadNetaYTD)}
+                    <Amt help={helpMode} nota={notaTotal(er, "Utilidad Neta (acumulado)", ["Utilidad de Operación + Otros Ingresos − Otros Gastos."])}>${fmt(er.utilidadNetaYTD)}</Amt>
                   </td>
                   <td className="px-3 text-right font-mono">
                     {pctFmt((er.utilidadNetaYTD / er.ventasYTD) * 100)}
