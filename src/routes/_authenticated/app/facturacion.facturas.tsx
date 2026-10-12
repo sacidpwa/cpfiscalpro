@@ -223,15 +223,15 @@ function Facturas() {
               className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm font-medium hover:bg-secondary disabled:opacity-60"
             >
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Actualizar
+              <span className="hidden sm:inline">Actualizar</span>
             </button>
             <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90">
-              <Plus className="h-4 w-4" /> Nueva factura
+              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Nueva factura</span>
             </button>
           </div>
         }
       />
-      <div className="space-y-4 p-8">
+      <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
           <div className="relative col-span-2 md:col-span-2">
             <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -269,7 +269,7 @@ function Facturas() {
             action={!data?.length ? <button onClick={() => setOpen(true)} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground">Emitir primera</button> : undefined}
           />
         ) : (
-          <div className="overflow-hidden rounded-lg border bg-card">
+          <div className="overflow-x-auto rounded-lg border bg-card">
             {selectedRows.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-secondary/40 px-3 py-2 text-xs">
                 <div>
@@ -285,7 +285,7 @@ function Facturas() {
                 </div>
               </div>
             )}
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-secondary/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="w-8 px-2 py-2">
@@ -305,9 +305,9 @@ function Facturas() {
                   </th>
                   <th className="px-3 py-2 text-left">Fecha</th>
                   <th className="px-3 py-2 text-left">Serie/Folio</th>
-                  <th className="px-3 py-2 text-left">UUID</th>
+                  <th className="hidden px-3 py-2 text-left md:table-cell">UUID</th>
                   <th className="px-3 py-2 text-left">RFC</th>
-                  <th className="px-3 py-2 text-left">Ambiente</th>
+                  <th className="hidden px-3 py-2 text-left sm:table-cell">Ambiente</th>
                   <th className="px-3 py-2 text-left">Estatus</th>
                   <th className="px-3 py-2 text-right">Total</th>
                   <th className="px-3 py-2"></th>
@@ -323,10 +323,10 @@ function Facturas() {
                     </td>
                     <td className="px-3 py-2 text-xs">{(s.fecha_timbrado ?? s.created_at)?.slice(0, 16).replace("T", " ")}</td>
                     <td className="px-3 py-2 font-mono text-xs">{[s.serie, s.folio].filter(Boolean).join("-") || "—"}</td>
-                    <td className="px-3 py-2 font-mono text-xs">{s.uuid_sat ?? "—"}</td>
+                    <td className="hidden px-3 py-2 font-mono text-xs md:table-cell">{s.uuid_sat ?? "—"}</td>
                     <td className="px-3 py-2 font-mono text-xs">{rfcOf(s) || "—"}</td>
 
-                    <td className="px-3 py-2 text-xs"><span className={`rounded px-1.5 py-0.5 ${s.ambiente === "live" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>{s.ambiente}</span></td>
+                    <td className="hidden px-3 py-2 text-xs sm:table-cell"><span className={`rounded px-1.5 py-0.5 ${s.ambiente === "live" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>{s.ambiente}</span></td>
                     <td className="px-3 py-2 text-xs">
                       <span className={`rounded px-1.5 py-0.5 ${s.estatus === "timbrado" ? "bg-emerald-500/10 text-emerald-600" : s.estatus === "cancelado" ? "bg-muted text-muted-foreground" : "bg-destructive/10 text-destructive"}`}>{s.estatus}</span>
                       {s.error_message && <p className="mt-0.5 max-w-xs truncate text-[10px] text-destructive" title={s.error_message}>{s.error_message}</p>}
