@@ -562,7 +562,7 @@ function Resultados() {
                         className="px-3 py-2 font-bold"
                         style={{ color: "#7c3aed", fontSize: ".85rem" }}
                       >
-                        HELIX-LAROSS (solo informativo)
+                        APÉNDICE — GASTO DE OPERACIÓN PERSONAL
                       </td>
                     </tr>
                     <tr
