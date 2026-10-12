@@ -94,7 +94,7 @@ function FacturacionConfig() {
     return (
       <div>
         <PageHeader title="Ajustes" description="Logo, importación de CFDI y estado de la conexión" />
-        <div className="grid gap-6 p-8 lg:grid-cols-3">
+        <div className="grid gap-6 p-4 sm:p-6 lg:p-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             <LogoSection orgId={org.id} />
             <FleetSection orgId={org.id} />
@@ -126,7 +126,7 @@ function FacturacionConfig() {
         title="Ajustes"
         description="Logo, importación de CFDI y configuración de FacturAPI"
       />
-      <div className="grid gap-6 p-8 lg:grid-cols-3">
+      <div className="grid gap-6 p-4 sm:p-6 lg:p-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <LogoSection orgId={org.id} />
           <FleetSection orgId={org.id} />
@@ -445,8 +445,8 @@ function FleetSection({ orgId }: { orgId: string }) {
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vehículos</h4>
           <button onClick={() => setEditVeh({})} className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs hover:bg-secondary"><Plus className="h-3 w-3" /> Agregar</button>
         </div>
-        <div className="overflow-hidden rounded-md border">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground">
               <tr><th className="px-2 py-1.5 text-left">Alias</th><th className="px-2 py-1.5 text-left">Config</th><th className="px-2 py-1.5 text-left">Placa</th><th className="px-2 py-1.5 text-left">Año</th><th className="px-2 py-1.5 text-left">Permiso SCT</th><th></th></tr>
             </thead>
@@ -476,8 +476,8 @@ function FleetSection({ orgId }: { orgId: string }) {
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"><UserCircle2 className="mr-1 inline h-3 w-3" /> Operadores</h4>
           <button onClick={() => setEditOp({})} className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs hover:bg-secondary"><Plus className="h-3 w-3" /> Agregar</button>
         </div>
-        <div className="overflow-hidden rounded-md border">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground">
               <tr><th className="px-2 py-1.5 text-left">Nombre</th><th className="px-2 py-1.5 text-left">RFC</th><th className="px-2 py-1.5 text-left">Licencia</th><th></th></tr>
             </thead>

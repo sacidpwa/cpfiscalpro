@@ -146,7 +146,7 @@ function Polizas() {
           </button>
         }
       />
-      <div className="space-y-4 p-8">
+      <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1" style={{ maxWidth: 320 }}>
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -227,8 +227,8 @@ function Polizas() {
             }
           />
         ) : (
-          <div className="overflow-hidden rounded-lg border bg-card">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border bg-card">
+            <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 text-left">Fecha</th>

@@ -89,7 +89,7 @@ function FlujoEfectivo() {
         title="Estado de Flujo de Efectivo"
         description="Origen y aplicación de recursos del periodo"
       />
-      <div className="space-y-4 p-8">
+      <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
           <label className="block text-xs">
             <span className="mb-1 block text-muted-foreground">Desde</span>
@@ -140,8 +140,8 @@ function FlujoEfectivo() {
             description="No hay movimientos en el periodo seleccionado."
           />
         ) : (
-          <div className="max-w-2xl overflow-hidden rounded-lg border bg-card">
-            <table className="w-full text-sm">
+          <div className="max-w-2xl overflow-x-auto rounded-lg border bg-card">
+            <table className="w-full min-w-[760px] text-sm">
               <tbody className="divide-y">
                 {/* Saldo inicial */}
                 <tr style={{ background: "#f8fafc" }}>

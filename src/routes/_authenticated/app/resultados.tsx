@@ -225,7 +225,7 @@ function Resultados() {
           ) : undefined
         }
       />
-      <div className="space-y-4 p-8">
+      <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
           <label className="block text-xs">
             <span className="mb-1 block text-muted-foreground">Desde</span>
@@ -276,8 +276,8 @@ function Resultados() {
             description="No hay movimientos contables en el periodo seleccionado."
           />
         ) : (
-          <div className="overflow-hidden rounded-lg border bg-card">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border bg-card">
+            <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground">
                 <tr>
                   <th rowSpan={2} className="px-3 py-2 text-left" style={{ width: "40%" }}>

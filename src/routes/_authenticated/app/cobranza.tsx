@@ -132,7 +132,7 @@ function MyBilling() {
             <p className="mt-2 text-sm text-muted-foreground">Sin facturas registradas.</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead className="text-left text-xs text-muted-foreground">
                   <tr>
                     <th className="py-1">Periodo</th>

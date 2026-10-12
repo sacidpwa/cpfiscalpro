@@ -78,7 +78,7 @@ function MensualesList() {
         <EmptyState icon={Calculator} title="Sin cédulas mensuales todavía" description="Haz clic en “Calcular mes” para generar la primera." />
       ) : (
         <div className="overflow-x-auto rounded-lg border bg-card">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-muted/50">
               <tr className="text-left">
                 <th className="p-3">Mes</th>

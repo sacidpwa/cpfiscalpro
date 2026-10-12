@@ -117,7 +117,7 @@ function Balance() {
           ) : undefined
         }
       />
-      <div className="space-y-4 p-8">
+      <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
           <label className="block text-xs"><span className="mb-1 block text-muted-foreground">Mes</span>
             <select value={mes} onChange={e => setMes(Number(e.target.value))} className="rounded-md border bg-background px-2 py-1.5 text-sm">
@@ -152,8 +152,8 @@ function Balance() {
           : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* ACTIVO */}
-            <div className="overflow-hidden rounded-lg border bg-card">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border bg-card">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead className="bg-blue-50/50 dark:bg-blue-950/10">
                   <tr><th colSpan={3} className="px-3 py-2 text-left font-bold text-blue-700 dark:text-blue-400">ACTIVO</th></tr>
                   <tr className="bg-secondary/50 text-xs uppercase text-muted-foreground">
@@ -171,8 +171,8 @@ function Balance() {
             </div>
 
             {/* PASIVO + CAPITAL */}
-            <div className="overflow-hidden rounded-lg border bg-card">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border bg-card">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead className="bg-orange-50/50 dark:bg-orange-950/10">
                   <tr><th colSpan={3} className="px-3 py-2 text-left font-bold text-orange-700 dark:text-orange-400">PASIVO</th></tr>
                   <tr className="bg-secondary/50 text-xs uppercase text-muted-foreground">

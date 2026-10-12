@@ -57,14 +57,14 @@ function Balanza() {
           ) : undefined
         }
       />
-      <div className="space-y-4 p-8">
+      <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
           <label className="block text-xs"><span className="mb-1 block text-muted-foreground">Desde</span><input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="rounded-md border bg-background px-2 py-1.5 text-sm"/></label>
           <label className="block text-xs"><span className="mb-1 block text-muted-foreground">Hasta</span><input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="rounded-md border bg-background px-2 py-1.5 text-sm"/></label>
           <button onClick={() => refetch()} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90">Actualizar</button>
         </div>
-        <div className="overflow-hidden rounded-lg border bg-card">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-lg border bg-card">
+          <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground">
               <tr><th className="px-3 py-2 text-left">Código</th><th className="px-3 py-2 text-left">Cuenta</th><th className="px-3 py-2 text-right">Cargos</th><th className="px-3 py-2 text-right">Abonos</th><th className="px-3 py-2 text-right">Saldo</th></tr>
             </thead>

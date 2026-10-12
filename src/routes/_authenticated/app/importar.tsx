@@ -110,7 +110,7 @@ function Importar() {
   return (
     <div>
       <PageHeader title="Importar respaldos Aspel" description="Sube los DBF de un respaldo COI/NOI completo. El sistema detecta cada tabla automáticamente; lo que no reconoce se guarda íntegro como respaldo." />
-      <div className="space-y-6 p-8">
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <div className="rounded-lg border bg-card p-6">
           <h3 className="text-sm font-semibold">Paso 1 · Selecciona uno o varios archivos (.DBF, .CSV o .XLSX)</h3>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -201,8 +201,8 @@ function Importar() {
 
         <div>
           <h3 className="mb-2 text-sm font-semibold">Historial de importaciones</h3>
-          <div className="overflow-hidden rounded-lg border bg-card">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border bg-card">
+            <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground"><tr><th className="px-3 py-2 text-left">Fecha</th><th className="px-3 py-2 text-left">Archivo</th><th className="px-3 py-2 text-left">Tipo</th><th className="px-3 py-2 text-right">OK</th><th className="px-3 py-2 text-right">Errores</th><th className="px-3 py-2 text-left">Estado</th><th className="px-3 py-2 text-center">Acciones</th></tr></thead>
               <tbody className="divide-y">
                 {!jobs?.length ? <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Sin importaciones previas.</td></tr>

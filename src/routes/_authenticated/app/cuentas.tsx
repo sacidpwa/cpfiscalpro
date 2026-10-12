@@ -128,7 +128,7 @@ function Cuentas() {
           </button>
         }
       />
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         {/* Buscador */}
         <div className="mb-4 flex items-center gap-3">
           <div className="relative flex-1" style={{ maxWidth: 400 }}>
@@ -147,8 +147,8 @@ function Cuentas() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Cargando…</p>
         ) : (
-          <div className="overflow-hidden rounded-lg border bg-card">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border bg-card">
+            <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 text-left" style={{ width: "45%" }}>

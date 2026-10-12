@@ -475,7 +475,7 @@ function NominaPersonal() {
           <div className="bg-card p-6 rounded-lg mt-6">
             <h3 className="text-lg font-semibold mb-4">Recibos Generados</h3>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
                     <th className="pb-2 font-medium">Fecha</th>
