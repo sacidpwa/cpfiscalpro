@@ -583,8 +583,10 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
     }
 
     // ==== ESCENARIO HELIX / LAROSS ====
-    // Cuentas "con distintivo": están mezcladas entre HELIX y HELIX-LAROSS y se
-    // reparten proporcional al headcount (campo employees.empresa).
+    // Cuentas "con distintivo" de NOMINA: están mezcladas entre HELIX y
+    // HELIX-LAROSS y se reparten proporcional al headcount (employees.empresa).
+    // Solo la nómina (sueldos, IMSS, ISN, honorarios) pertenece a LAROSS.
+    // NO incluye la devolución de IVA (4200-002): es un ingreso, no es nómina.
     const MIXED_ACCTS = new Set([
       "610000100000000000002", // Sueldos y Salarios
       "610000200000000000002", // Asimilados a Salarios
@@ -595,7 +597,6 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       "610003100000000000002", // Honorarios
       "620002900000000000002", // Honorarios (admin)
       "620003000000000000002", // Honorarios (admin)
-      "420000200000000000002", // Devoluciones y descuentos
     ]);
 
     // hRatio = parte de HELIX (se aplica solo cuando NO incluimos LAROSS, pero se
@@ -1029,7 +1030,8 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
         imss: imssPer * hRatio,
         isn: isnPer * hRatio,
         honorarios: honorariosPer * hRatio,
-        devoluciones: Math.abs(devolPer) * hRatio,
+        // Devoluciones NO es de LAROSS (no es nómina): va 100% a HELIX, 0 a LAROSS
+        devoluciones: Math.abs(devolPer),
         ingresosCliente: ingresosClientePer * hRatio,
       },
       laross: {
@@ -1038,7 +1040,7 @@ export const getHelixLarossSplit = createServerFn({ method: "POST" })
         imss: imssPer * lRatio,
         isn: isnPer * lRatio,
         honorarios: honorariosPer * lRatio,
-        devoluciones: Math.abs(devolPer) * lRatio,
+        devoluciones: 0,
         ingresosCliente: ingresosClientePer * lRatio,
       },
       ratios: { helix: hCount, laross: lCount },
