@@ -335,6 +335,29 @@ function Resultados() {
                   </tr>
                   );
                 })}
+                {/* Ingreso por oficina de importaciones — informativo, NO suma al total
+                    (la venta ya está reconocida en VENTAS; 1150-003 es un activo por cobrar) */}
+                {splitOn && (Math.abs(er.ingresosClientePer) > 0.01 || Math.abs(er.ingresosClienteYTD) > 0.01) && (
+                  <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>
+                    <td className="px-3 pl-6 font-mono text-xs" style={{ color: "#15803d" }}>
+                      1150-003 — OFICINA DE IMPORTACIONES (info)
+                    </td>
+                    <td
+                      className="px-3 text-right font-mono font-medium"
+                      style={{ color: "#15803d" }}
+                    >
+                      ${fmt(er.ingresosClientePer)}
+                    </td>
+                    <td className="px-3 text-right font-mono text-muted-foreground">—</td>
+                    <td
+                      className="px-3 text-right font-mono font-medium"
+                      style={{ color: "#15803d" }}
+                    >
+                      ${fmt(er.ingresosClienteYTD)}
+                    </td>
+                    <td className="px-3 text-right font-mono text-muted-foreground">—</td>
+                  </tr>
+                )}
                 {/* Honorarios Profesionales (asimilados) — informativo, no suma al total */}
                 {splitOn && (
                   <tr className="hover:bg-secondary/30" style={{ background: "#f0fdf4" }}>

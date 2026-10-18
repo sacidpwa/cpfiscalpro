@@ -812,19 +812,9 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       return arr.reduce((a: number, c: any) => a + c[f], 0);
     }
 
-    // Si incluimos LAROSS, el ingreso de importaciones entra como renglón real de INGRESOS
-    if (data.includeLaross && (Math.abs(ingresosClientePer) > 0.01 || Math.abs(ingresosClienteYTD) > 0.01)) {
-      cats["4"].push({
-        codigo: "115000100300000000003",
-        nombre: "INGRESOS OFIC. IMPORTACIONES",
-        perVal: ingresosClientePer,
-        ytdVal: ingresosClienteYTD,
-        perPct: 0,
-        ytdPct: 0,
-      });
-      ventasPer += ingresosClientePer;
-      ventasYTD += ingresosClienteYTD;
-    }
+    // NOTA: el ingreso de importaciones (cuenta 1150-003) NO se suma como renglón
+    // de INGRESOS. Esa cuenta es un ACTIVO (cuenta por cobrar) y la venta ya está
+    // reconocida en VENTAS (grupo 4). Se muestra solo informativo en la pantalla.
 
     addPct(cats["4"]);
     addPct(cats["5"]);
@@ -903,6 +893,7 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       ventasPer,
       ventasYTD,
       ingresosClientePer,
+      ingresosClienteYTD,
       asimiladosPer,
       asimiladosYTD,
       totalIngresosPer: tIngPer,
