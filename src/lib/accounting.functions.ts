@@ -620,6 +620,7 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
     }
     const totalEmp = hCount + lCount;
     hRatio = totalEmp > 0 ? hCount / totalEmp : 1;
+    const lRatio = totalEmp > 0 ? lCount / totalEmp : 0;
     // solo se usa para ajustar montos cuando NO incluimos LAROSS
     const applyRatio = !data.includeLaross;
     function ratioFor(codigo: string): number {
@@ -636,7 +637,7 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       .eq("organization_id", data.organizationId)
       .eq("codigo", "115000100300000000003")
       .maybeSingle();
-    if (clienteAcct && data.includeLaross) {
+    if (clienteAcct) {
       const fytdDesde = `${data.ejercicio}-01-01`;
       const fhasta = new Date(data.ejercicio, Math.min(data.hastaMes, 12), 0)
         .toISOString()
@@ -813,9 +814,24 @@ export const getEstadoResultados = createServerFn({ method: "POST" })
       return arr.reduce((a: number, c: any) => a + c[f], 0);
     }
 
-    // NOTA: el ingreso de importaciones (cuenta 1150-003) NO se suma como renglón
-    // de INGRESOS. Esa cuenta es un ACTIVO (cuenta por cobrar) y la venta ya está
-    // reconocida en VENTAS (grupo 4). Se muestra solo informativo en la pantalla.
+    // El ingreso de importaciones (cuenta 1150-003) es un ACTIVO (cuenta por cobrar)
+    // y su venta ya está reconocida en VENTAS (grupo 4), así que NO se suma como
+    // renglón aparte. Al DESPALOMear (solo HELIX) se retira la parte de LAROSS de
+    // ese ingreso, dejando solo la de HELIX.
+    if (!data.includeLaross && (Math.abs(ingresosClientePer) > 0.01 || Math.abs(ingresosClienteYTD) > 0.01)) {
+      const lImportPer = ingresosClientePer * lRatio;
+      const lImportYTD = ingresosClienteYTD * lRatio;
+      ventasPer -= lImportPer;
+      ventasYTD -= lImportYTD;
+      cats["4"].push({
+        codigo: "115000100300000000003",
+        nombre: "OFICINA DE IMPORTACIONES (parte LAROSS)",
+        perVal: -lImportPer,
+        ytdVal: -lImportYTD,
+        perPct: 0,
+        ytdPct: 0,
+      });
+    }
 
     addPct(cats["4"]);
     addPct(cats["5"]);
